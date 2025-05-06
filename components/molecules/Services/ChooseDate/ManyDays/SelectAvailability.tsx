@@ -212,8 +212,8 @@ export const SelectAvailability = () => {
                     sx={{ mt: 1, '& .MuiPaper-root': { width: 352 } }}
                 >
                     <SelectDate
-                        onDayClick={onDayClick}
-                        filteredDate={filteredDate}
+                        onDateSelect={onDayClick}
+                        initialSelectedDate={filteredDate}
                     />
                 </Popover>
             </Box>

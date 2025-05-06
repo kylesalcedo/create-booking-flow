@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+Project Requirements Doc:
+
+create-booking-flow has a booking website's flow for booking a session with a clinician.
+We are making batch-booker to be able to book multiple appointments at once. 
+Use create-booking-flow as a reference for the workflow that is needed in order to make a more efficient "batch-booker" that can book multiple sessions with multiple clinicians at a time.
+
+Be thorough by scanning codebase when needed and utilizing other tools. Use industry best practices to anticipate new features that may need to be added to the "Batch Booking" flow.

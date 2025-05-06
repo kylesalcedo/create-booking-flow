@@ -9,8 +9,6 @@ import { scrollIntoStore } from 'components/molecules/Map/helper'
 
 interface Props {
     store?: StoreType|undefined
-    lat: number
-    lng: number
 }
 
 export const MapStore = ({ store }: Props) => {

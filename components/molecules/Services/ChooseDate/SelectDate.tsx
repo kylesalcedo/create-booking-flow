@@ -1,9 +1,8 @@
-import { useState } from 'react'
-import { DayModifiers } from 'react-day-picker'
-import DayPicker from 'react-day-picker'
+import { useState, useCallback, useMemo } from 'react'
+import { Modifiers, DayPicker, SelectSingleEventHandler } from 'react-day-picker'
 import { Theme, Box } from '@mui/material'
 import { makeStyles } from '@mui/styles'
-import 'react-day-picker/lib/style.css'
+import 'react-day-picker/dist/style.css'
 import { useCartState } from 'lib/state/cart'
 import { useCartStoreState } from 'lib/state/store'
 import { useStaffDates } from 'lib/state/staffDate'
@@ -89,24 +88,29 @@ const useStyles = makeStyles((theme: Theme) => ({
 }))
 
 interface Props {
-    onDayClick: (day: Date, cartBookableDate: CartBookableDate) => void
-    filteredDate?: Date
+    onDateSelect: (day: Date, cartBookableDate: CartBookableDate) => void
+    initialSelectedDate?: Date
 }
 
-export const SelectDate = ({ onDayClick, filteredDate }: Props) => {
+export const SelectDate = ({ onDateSelect, initialSelectedDate }: Props) => {
     const classes = useStyles()
-    const fromMonth = new Date()
-    fromMonth.setHours(0, 0, 0, 0)
+    const fromMonth = useMemo(() => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }, []);
 
     const cartState = useCartState()
     const cartStoreState = useCartStoreState()
+    
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialSelectedDate)
     const [displayedMonth, setDisplayedMonth] = useState(
-        filteredDate ?? new Date()
+        initialSelectedDate ?? new Date()
     )
     const { loadStaffDates, getStaffDateState } = useStaffDates()
     const staffDatesStore = getStaffDateState()
-    const weekdaysShort = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
     const [refresher, setRefresher] = useState(0)
+    
     const onMonthChange = async (date: Date) => {
         setDisplayedMonth(date)
         await loadStaffDates(
@@ -115,10 +119,10 @@ export const SelectDate = ({ onDayClick, filteredDate }: Props) => {
             cartState,
             cartStoreState?.location.tz
         )
-        setRefresher(refresher + 1) //that forces the control to be refreshed and display available dates
+        setRefresher(refresher + 1)
     }
 
-    const getAllowedDaysInMonth = (day: Date) => {
+    const getAllowedDaysInMonth = useCallback((day: Date) => {
         if (staffDatesStore === undefined) {
             return []
         }
@@ -129,73 +133,58 @@ export const SelectDate = ({ onDayClick, filteredDate }: Props) => {
                     x.year === day.getUTCFullYear()
             )
             .flatMap((x) => x.dates)
-    }
+    }, [staffDatesStore])
 
-    const handleDayClick = async (day, modifiers: DayModifiers) => {
-        if (modifiers.disabled) {
+    const handleDateSelect: SelectSingleEventHandler = (day, selectedDay, activeModifiers) => {
+        if (activeModifiers.disabled || !selectedDay) {
+            setSelectedDate(undefined)
             return
         }
-        const daysInMonth = getAllowedDaysInMonth(day)
-        const selectedDays = daysInMonth.filter(
+        
+        const daysInMonth = getAllowedDaysInMonth(selectedDay)
+        const matchingBookableDates = daysInMonth.filter(
             (x) =>
-                x.date.getUTCDate() === day.getUTCDate() &&
-                x.date.getUTCMonth() === day.getUTCMonth() &&
-                x.date.getUTCFullYear() == day.getUTCFullYear()
+                x.date.getUTCDate() === selectedDay.getUTCDate() &&
+                x.date.getUTCMonth() === selectedDay.getUTCMonth() &&
+                x.date.getUTCFullYear() == selectedDay.getUTCFullYear()
         )
-        if (selectedDays.length === 0) {
-            return
+        
+        if (matchingBookableDates.length > 0) {
+            setSelectedDate(selectedDay)
+            onDateSelect(selectedDay, matchingBookableDates[0].cartBookableDate)
+        } else {
+            setSelectedDate(undefined)
         }
-
-        onDayClick(day, selectedDays[0].cartBookableDate)
     }
 
-    const isDisabled = (day: Date) => {
+    const isDisabled = useCallback((day: Date): boolean => {
         if (day < fromMonth) {
             return true
         }
         const daysInMonth = getAllowedDaysInMonth(day)
-        const hasDay = daysInMonth.filter(
+        const hasDay = daysInMonth.some(
             (x) => x.date.getUTCDate() === day.getUTCDate()
         )
-        return hasDay.length === 0
-    }
+        return !hasDay
+    }, [fromMonth, getAllowedDaysInMonth])
 
-    const renderDay = (day: Date, modifiers: any) => {
-        let dayClassName = classes.calendarDayCell
-        let dateWrapperClassName = classes.dateWrapper
-        if (day < fromMonth && modifiers?.disabled) {
-            dayClassName += ` ${classes.disabled}`
-        }
-        if (day > fromMonth && modifiers?.disabled) {
-            dayClassName += ` ${classes.notAvailable}`
-        }
-        if (modifiers?.today) {
-            dateWrapperClassName += ` ${classes.today}`
-        }
-        if (modifiers?.selected) {
-            dateWrapperClassName += ` ${classes.selected}`
-        }
-
-        return (
-            <div className={dayClassName}>
-                <div className={classes.calendarDayDate}>
-                    <div className={dateWrapperClassName}>{day.getDate()}</div>
-                </div>
-            </div>
-        )
-    }
     return (
         <Box className={classes.dayPickerWrapper}>
             <DayPicker
+                mode="single"
                 month={displayedMonth}
                 className={classes.calendarDayPicker}
-                fromMonth={new Date()}
-                selectedDays={filteredDate}
-                weekdaysShort={weekdaysShort}
-                disabledDays={isDisabled}
+                fromMonth={fromMonth}
+                selected={selectedDate}
+                onSelect={handleDateSelect}
+                disabled={isDisabled}
                 onMonthChange={onMonthChange}
-                onDayClick={handleDayClick}
-                renderDay={renderDay}
+                showOutsideDays
+                modifiersClassNames={{
+                    selected: classes.selected,
+                    today: classes.today,
+                    disabled: classes.disabled,
+                }}
             />
         </Box>
     )

@@ -139,8 +139,8 @@ export const ShowTimeForOneDayComponent = () => {
                             </Typography>
                         </Box>
                         <SelectDate
-                            onDayClick={onDayClick}
-                            filteredDate={filteredDate}
+                            onDateSelect={onDayClick}
+                            initialSelectedDate={filteredDate}
                         />
                     </Box>
                 </Grid>

@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+  When debugging a problem:
+  - Ensure you have sufficient information to understand the problem deeply
+  - Reflect on 5-7 different possible sources of the problem
+  - Distill these down to 1-2 most likely sources
+  - Implement a solution for the most likely source by either:
+    - Adding more logging to validate your theory
+    - Implementing the fix if extremely confident about the source
