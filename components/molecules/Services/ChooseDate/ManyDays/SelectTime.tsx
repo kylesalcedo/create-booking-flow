@@ -1,13 +1,15 @@
 import { Typography, Box } from '@mui/material'
 import { makeStyles } from '@mui/styles'
-import { StaffTimes } from 'lib/state/staffTime/types'
+import { StaffTimes, StaffTime as StaffTimeType } from 'lib/state/staffTime/types'
 import formatDateFns from 'lib/utils/formatDateFns'
 import { Store } from 'lib/state/store/types'
 import { differenceInDays, isSameDay } from 'date-fns'
 import { utcToZonedTime } from 'date-fns-tz'
 import { useMobile } from 'lib/utils/useMobile'
-import { Time } from 'components/molecules/Services/ChooseDate/Time'
 import { DisplayTime } from 'components/molecules/Services/ChooseDate/DisplayTime'
+import { useSelectedServices } from 'lib/state/services'
+import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
+import React from 'react'
 
 const useStyles = makeStyles(() => ({
     timeBlock: {
@@ -47,17 +49,31 @@ export const SelectTime = ({
 }: Props) => {
     const { isMobile } = useMobile()
     const classes = useStyles()
-    const times = staffTimes.times
+    const { selectedServicesStateValue } = useSelectedServices()
+
+    const currentService: CartBookableItem | undefined = selectedServicesStateValue?.[0]
+
+    const individualTimeSlots = staffTimes.times
+    const currentDateForTheseSlots = staffTimes.date
+
     const timeZone = store?.location.tz
-    const currentDate = utcToZonedTime(new Date(), timeZone)
-    currentDate.setHours(0)
+    const todayAtLocation = utcToZonedTime(new Date(), timeZone)
+    todayAtLocation.setHours(0)
 
     const getDifferenceInDaysText = (date: Date): string => {
-        if (isSameDay(date, currentDate)) {
+        if (isSameDay(date, todayAtLocation)) {
             return 'today'
         }
-        const diff = differenceInDays(date, currentDate)
+        const diff = differenceInDays(date, todayAtLocation)
         return `${diff + 1}d away`
+    }
+
+    if (!currentService) {
+        return (
+            <Box sx={{ pt: 3, pb: 2 }} className={classes.timeBlock}>
+                <Typography sx={{ textAlign: 'center', width: '100%' }}>Please select a service first.</Typography>
+            </Box>
+        )
     }
 
     return (
@@ -69,16 +85,16 @@ export const SelectTime = ({
                 <Box>
                     <Typography variant="h3" component="span">
                         {formatDateFns(
-                            staffTimes.date,
+                            currentDateForTheseSlots,
                             store?.location.tz,
                             'EEEE, MMM d'
                         )}
                     </Typography>
                     <Typography variant="body1" component="span" sx={{ pl: 1 }}>
-                        {getDifferenceInDaysText(staffTimes.date)}
+                        {getDifferenceInDaysText(currentDateForTheseSlots)}
                     </Typography>
                 </Box>
-                {filteredDate && isSameDay(filteredDate!, staffTimes.date) && (
+                {filteredDate && isSameDay(filteredDate!, currentDateForTheseSlots) && (
                     <Typography
                         variant="body1"
                         component="span"
@@ -93,13 +109,20 @@ export const SelectTime = ({
                 className={classes.buttonsWrapper}
                 sx={{ padding: isMobile ? '16px 16px 0 16px' : '16px 0 0 0' }}
             >
-                {times.concat().map((time) => (
+                {individualTimeSlots.map((timeSlot: StaffTimeType) => (
                     <DisplayTime
-                        key={'time' + time.cartBookableTime?.id}
-                        time={time}
+                        key={'time' + timeSlot.cartBookableTime?.id}
+                        time={timeSlot}
                         store={store}
+                        currentSelectedDate={currentDateForTheseSlots}
+                        currentService={currentService}
                     />
                 ))}
+                {individualTimeSlots.length === 0 && (
+                    <Typography fontWeight={500} color={'#C4C4C4'}>
+                        No available times for this day.
+                    </Typography>
+                )}
             </Box>
         </Box>
     )

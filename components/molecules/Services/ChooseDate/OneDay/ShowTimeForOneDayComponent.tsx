@@ -17,6 +17,7 @@ import {
     useSetSelectedStaffTimeState,
 } from 'lib/state/staffTime'
 import { useMobile } from 'lib/utils/useMobile'
+import { MultiSessionReview } from '../MultiSessionReview'
 
 interface StylesProps {
     isMobile: boolean
@@ -151,6 +152,7 @@ export const ShowTimeForOneDayComponent = () => {
                             filteredDate={filteredDate}
                             store={selectedStore}
                         />
+                        <MultiSessionReview />
                         <Box sx={{ pt: 8 }} />
                     </Box>
                 </Grid>
