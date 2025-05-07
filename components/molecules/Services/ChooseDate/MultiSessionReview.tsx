@@ -3,65 +3,44 @@ import { Box, Typography, Button, List, ListItem, ListItemText, IconButton } fro
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useMultiSessionManager } from 'lib/state/multiple-sessions';
 import formatDateFns, { TimeFormat } from 'lib/utils/formatDateFns';
-import { useFlowStep } from 'lib/state/booking-flow'; // To navigate to next step
-import { Step } from 'lib/state/booking-flow/types'; // For step definition
-// Import other necessary hooks/types, e.g., for cart, store, SDK calls
-import { useCartState, useCartMethods } from 'lib/state/cart';
+// We might not need useFlowStep or Step here if navigation is handled by parent
+// import { useFlowStep } from 'lib/state/booking-flow'; 
+// import { Step } from 'lib/state/booking-flow/types'; 
 import { useCartStoreState } from 'lib/state/store';
-import { Blvd } from '@boulevard/blvd-book-sdk'; // Assuming Blvd is globally available or imported correctly
+// Blvd and other SDK-specific imports for checkout will remain for handleProceedToCheckout
 
-export const MultiSessionReview = () => {
-    const { sessions, removeSession, updateSessionStatus, clearSessions } = useMultiSessionManager();
-    const { setStep } = useFlowStep();
-    const cart = useCartState(); // Main cart, might not be used directly for each session booking
+interface MultiSessionReviewProps {
+    onAddAnotherSessionClicked?: () => void; // Optional callback to notify parent component
+}
+
+export const MultiSessionReview = ({ onAddAnotherSessionClicked }: MultiSessionReviewProps) => {
+    const { sessions, removeSession, updateSessionStatus } = useMultiSessionManager();
     const store = useCartStoreState();
-    const { createCart, setCartCommonState } = useCartMethods(); // For creating temporary carts if needed
 
     const handleProceedToCheckout = async () => {
         console.log("Proceeding to checkout with sessions:", sessions);
-        // TODO: Implement actual reservation logic for each session
-        // This is a complex part depending on SDK capabilities
-
         for (const session of sessions) {
             if (session.status === 'pending') {
                 try {
-                    // Option 1: Use a new cart for each session reservation
-                    // This is a simplified placeholder - actual implementation will be more complex
                     console.log(`Attempting to reserve session for service: ${session.service.item?.name} on ${session.date}`);
-                    
-                    // const tempCart = await Blvd.carts.create(store?.location); // Create a new cart for this session
-                    // await tempCart.addBookableItem(session.service.item as any); // Cast might be needed if types differ for add
-                    // const reservedCart = await tempCart.reserveBookableItems(session.selectedTime);
-                    
-                    // For now, just simulate success
-                    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+                    await new Promise(resolve => setTimeout(resolve, 500)); 
                     updateSessionStatus(session.id, 'confirmed', { appointmentId: `fake-${session.id}` });
                     console.log(`Session ${session.id} confirmed (simulated)`);
-
                 } catch (error) {
                     console.error(`Failed to reserve session ${session.id}:`, error);
                     updateSessionStatus(session.id, 'failed', { error: (error as Error).message });
                 }
             }
         }
-        // After attempting all, navigate or show summary of successes/failures
-        // If all successful (or partially successful and user accepts), proceed to a consolidated payment step (if possible)
-        // or to the next logical step if payments are per-session.
         alert("Reservation attempts complete. Check console. Next step would be payment/confirmation.");
-        // Example: setStep(Step.PersonalInfo); // Or a new Step.MultiSessionConfirmation
     };
 
-    const handleAddAnotherSession = () => {
-        // This function needs to navigate the user to the appropriate place to add another session.
-        // This could be: Resetting current selections in ChooseDate/ChooseTime, or going back to ServiceSelection.
-        // For now, just an alert.
-        alert("Navigating to add another session (placeholder).");
-        // Example: Could clear current date/time selections and stay on ChooseDate/Time, or setStep(Step.SelectService)
-        // For now, we assume the user can navigate back manually or we clear some state.
+    const handleAddAnotherSessionInternal = () => {
+        onAddAnotherSessionClicked?.(); // Only invoke if the parent supplied a handler
     };
 
     if (sessions.length === 0) {
-        return null; // Don't render if no sessions are added yet
+        return null; 
     }
 
     return (
@@ -88,10 +67,10 @@ export const MultiSessionReview = () => {
                 ))}
             </List>
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-                <Button variant="outlined" onClick={handleAddAnotherSession}>
+                <Button variant="outlined" onClick={handleAddAnotherSessionInternal}>
                     Add Another Session
                 </Button>
-                <Button variant="contained" onClick={handleProceedToCheckout} disabled={sessions.every(s => s.status !== 'pending')}>
+                <Button variant="contained" onClick={handleProceedToCheckout} disabled={sessions.every(s => s.status !== 'pending') || sessions.length === 0}>
                     Reserve All Pending & Proceed
                 </Button>
             </Box>
