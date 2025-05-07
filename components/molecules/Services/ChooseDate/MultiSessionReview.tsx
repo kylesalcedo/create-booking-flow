@@ -3,9 +3,11 @@ import { Box, Typography, Button, List, ListItem, ListItemText, IconButton } fro
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useMultiSessionManager } from 'lib/state/multiple-sessions';
 import formatDateFns, { TimeFormat } from 'lib/utils/formatDateFns';
-import { useCartStoreState } from 'lib/state/store';
 import { useCartMethods, useCartState } from 'lib/state/cart';
+import { useCartStoreState } from 'lib/state/store';
 import { LayoutContext } from 'components/atoms/layout/LayoutContext';
+import { Blvd } from 'lib/sdk/blvd';
+import { Location } from '@boulevard/blvd-book-sdk/lib/locations';
 // We might not need useFlowStep or Step here if navigation is handled by parent
 // import { useFlowStep } from 'lib/state/booking-flow'; 
 // import { Step } from 'lib/state/booking-flow/types'; 
@@ -23,19 +25,33 @@ export const MultiSessionReview = ({ onAddAnotherSessionClicked }: MultiSessionR
     const layout = useContext(LayoutContext);
 
     const handleProceedToCheckout = async () => {
-        if (!cart) {
-            alert('Cart not found. Please try again.');
-            return;
-        }
-
         layout.setIsShowLoader(true);
         let hasError = false;
         for (const session of sessions) {
             if (session.status !== 'pending') continue;
 
             try {
-                await reserveBookableTime(cart, session.selectedTime, store);
-                updateSessionStatus(session.id, 'confirmed', { appointmentId: session.selectedTime?.id });
+                const location: Location | undefined = store?.location as unknown as Location;
+                const sessionCart = await Blvd.carts.create(location);
+
+                // Add service to cart
+                const cartAfterAdd = await sessionCart.addBookableItem(session.service.item);
+
+                // TODO optional staff variant assignment
+
+                // Reserve start time for the single item
+                await cartAfterAdd.reserveBookableItems(session.selectedTime);
+
+                // If no payment required, checkout immediately to create appointment
+                if (!cartAfterAdd.summary.paymentMethodRequired) {
+                    const payload = await cartAfterAdd.checkout();
+                    const appointmentId = payload?.appointments?.[0]?.appointmentId;
+                    updateSessionStatus(session.id, 'confirmed', { appointmentId });
+                } else {
+                    // If payment required, leave as pending or handle payment flow
+                    updateSessionStatus(session.id, 'failed', { error: 'Payment required' });
+                    hasError = true;
+                }
             } catch (error) {
                 console.error(`Failed to reserve session ${session.id}:`, error);
                 updateSessionStatus(session.id, 'failed', { error: (error as Error).message });
@@ -46,7 +62,7 @@ export const MultiSessionReview = ({ onAddAnotherSessionClicked }: MultiSessionR
         layout.setIsShowLoader(false);
 
         if (hasError) {
-            alert('Some sessions could not be reserved. Please review and try again.');
+            alert('Some sessions were not reserved.');
         } else {
             alert('All sessions successfully reserved!');
         }
