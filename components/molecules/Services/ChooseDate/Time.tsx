@@ -7,6 +7,8 @@ import { Store } from 'lib/state/store/types'
 import { LayoutContext } from 'components/atoms/layout/LayoutContext'
 import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
 import { useMultiSessionManager } from 'lib/state/multiple-sessions'
+import { useCartMethods, useCartState } from 'lib/state/cart'
+import { useSelectedServices } from 'lib/state/services'
 
 const useStyles = makeStyles(() => ({
     selectTimeBtn: {
@@ -28,6 +30,9 @@ export const Time = ({ time, store, currentSelectedDate, currentService }: Props
     const classes = useStyles()
     const layout = useContext(LayoutContext)
     const { addSession } = useMultiSessionManager()
+    const cart = useCartState()
+    const { addService, selectStaff } = useCartMethods()
+    const { selectedServicesStateValue } = useSelectedServices()
 
     const onSelectTimeAndAddSession = async () => {
         if (!currentService || !time.cartBookableTime) {
@@ -35,16 +40,43 @@ export const Time = ({ time, store, currentSelectedDate, currentService }: Props
             return
         }
         
+        if (!cart) {
+            console.error('Cart is not available when adding session')
+            return
+        }
+
         const staffDetails = currentService.selectedStaffVariant?.staff
 
-        addSession({
-            service: currentService,
-            staff: staffDetails,
-            date: currentSelectedDate,
-            selectedTime: time.cartBookableTime,
-            locationDisplayTime: time.locationTime,
-        })
-        alert('Session added! View your list of sessions or add another.')
+        // Always create a new cart bookable item for the session to allow multiple reservations
+        const beforeIds = selectedServicesStateValue.map((s) => s.id)
+        try {
+            // Add identical service again to cart to create a distinct bookable item
+            const { cart: updatedCart, services } = await addService(cart, currentService.item)
+
+            // Find the newly created CartBookableItem
+            const newBookableItem = services.find((s) => !beforeIds.includes(s.id))
+                ?? services[services.length - 1]
+
+            // Apply staff selection (if any) – currently omitted to avoid type mismatch; TODO: map to internal Staff type if needed
+            await selectStaff(updatedCart, newBookableItem, undefined)
+
+            // Store the session referencing the newly created bookable item
+            addSession({
+                service: newBookableItem,
+                staff: staffDetails,
+                date: currentSelectedDate,
+                selectedTime: time.cartBookableTime,
+                locationDisplayTime: time.locationTime,
+            })
+
+            layout.setIsShowLoader(false)
+            // TODO: Replace alert with snackbar/UX improvement
+            alert('Session added! View your list of sessions or add another.')
+        } catch (error) {
+            console.error('Failed to add service for multi-session:', error)
+            layout.setIsShowLoader(false)
+            alert('Unable to add session. Please try again.')
+        }
     }
 
     return (

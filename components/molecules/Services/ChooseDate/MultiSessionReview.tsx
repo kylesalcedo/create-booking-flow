@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { Box, Typography, Button, List, ListItem, ListItemText, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useMultiSessionManager } from 'lib/state/multiple-sessions';
 import formatDateFns, { TimeFormat } from 'lib/utils/formatDateFns';
+import { useCartStoreState } from 'lib/state/store';
+import { useCartMethods, useCartState } from 'lib/state/cart';
+import { LayoutContext } from 'components/atoms/layout/LayoutContext';
 // We might not need useFlowStep or Step here if navigation is handled by parent
 // import { useFlowStep } from 'lib/state/booking-flow'; 
 // import { Step } from 'lib/state/booking-flow/types'; 
-import { useCartStoreState } from 'lib/state/store';
 // Blvd and other SDK-specific imports for checkout will remain for handleProceedToCheckout
 
 interface MultiSessionReviewProps {
@@ -16,23 +18,38 @@ interface MultiSessionReviewProps {
 export const MultiSessionReview = ({ onAddAnotherSessionClicked }: MultiSessionReviewProps) => {
     const { sessions, removeSession, updateSessionStatus } = useMultiSessionManager();
     const store = useCartStoreState();
+    const { reserveBookableTime } = useCartMethods();
+    const cart = useCartState();
+    const layout = useContext(LayoutContext);
 
     const handleProceedToCheckout = async () => {
-        console.log("Proceeding to checkout with sessions:", sessions);
+        if (!cart) {
+            alert('Cart not found. Please try again.');
+            return;
+        }
+
+        layout.setIsShowLoader(true);
+        let hasError = false;
         for (const session of sessions) {
-            if (session.status === 'pending') {
-                try {
-                    console.log(`Attempting to reserve session for service: ${session.service.item?.name} on ${session.date}`);
-                    await new Promise(resolve => setTimeout(resolve, 500)); 
-                    updateSessionStatus(session.id, 'confirmed', { appointmentId: `fake-${session.id}` });
-                    console.log(`Session ${session.id} confirmed (simulated)`);
-                } catch (error) {
-                    console.error(`Failed to reserve session ${session.id}:`, error);
-                    updateSessionStatus(session.id, 'failed', { error: (error as Error).message });
-                }
+            if (session.status !== 'pending') continue;
+
+            try {
+                await reserveBookableTime(cart, session.selectedTime, store);
+                updateSessionStatus(session.id, 'confirmed', { appointmentId: session.selectedTime?.id });
+            } catch (error) {
+                console.error(`Failed to reserve session ${session.id}:`, error);
+                updateSessionStatus(session.id, 'failed', { error: (error as Error).message });
+                hasError = true;
             }
         }
-        alert("Reservation attempts complete. Check console. Next step would be payment/confirmation.");
+
+        layout.setIsShowLoader(false);
+
+        if (hasError) {
+            alert('Some sessions could not be reserved. Please review and try again.');
+        } else {
+            alert('All sessions successfully reserved!');
+        }
     };
 
     const handleAddAnotherSessionInternal = () => {
