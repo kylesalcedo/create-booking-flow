@@ -4,6 +4,7 @@ import { ClientSearchAutocomplete } from 'components/molecules/Services/Personal
 import { useClientValue } from 'lib/state/client'
 import { Step } from 'lib/state/booking-flow/types'
 import { useFlowStep } from 'lib/state/booking-flow'
+import { Formik } from 'formik'
 
 export default function ClientSearchScreen() {
     const selectedClient = useClientValue()
@@ -17,16 +18,20 @@ export default function ClientSearchScreen() {
     }
 
     return (
-        <WithLayout
-            isShowLoader={false}
-            leftPanel={<></>}
-            rightPanel={<ClientSearchAutocomplete />}
-            rightPanelCaption="Search Client"
-            rightPanelBtnCaption="Continue"
-            showBottom={true}
-            addBackArrow={true}
-            backArrowStep={Step.ChooseLocation}
-            onRightPanelBtnClick={handleContinue}
-        />
+        <Formik initialValues={{}} onSubmit={() => {}}>
+            {() => (
+                <WithLayout
+                    isShowLoader={false}
+                    leftPanel={<></>}
+                    rightPanel={<ClientSearchAutocomplete />}
+                    rightPanelCaption="Search Client"
+                    rightPanelBtnCaption="Continue"
+                    showBottom={true}
+                    addBackArrow={true}
+                    backArrowStep={Step.ChooseLocation}
+                    onRightPanelBtnClick={handleContinue}
+                />
+            )}
+        </Formik>
     )
 } 
