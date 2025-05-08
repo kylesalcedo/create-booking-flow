@@ -4,7 +4,8 @@
 // match what's in here!
 // module.exports = withTM({ // Removed withTM wrapper
 module.exports = {
-    output: 'export',
+    // Disable static export so that Next.js API routes remain functional
+    // output: 'export',
     compiler: {
         styledComponents: true,
     },
