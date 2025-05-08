@@ -20,14 +20,22 @@ export default async function handler(
     }
 
     const businessId = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID as string
-    const apiKey =
-        process.env.BLVD_ADMIN_API_KEY ||
-        process.env.NEXT_PUBLIC_BLVD_API_KEY
+    const adminKey = process.env.BLVD_ADMIN_API_KEY || process.env.NEXT_PUBLIC_BLVD_API_KEY
+    const adminSecret = process.env.BLVD_ADMIN_API_SECRET
 
-    if (!businessId || !apiKey) {
+    if (!businessId || !adminKey) {
         return res
             .status(500)
             .json({ error: 'Missing Boulevard credentials on server' })
+    }
+
+    // Build Authorization header. Prefer Basic auth with key:secret if secret provided, otherwise fallback to Bearer.
+    let authHeader: string
+    if (adminSecret) {
+        const token = Buffer.from(`${adminKey}:${adminSecret}`).toString('base64')
+        authHeader = `Basic ${token}`
+    } else {
+        authHeader = `Bearer ${adminKey}`
     }
 
     const graphQuery = `
@@ -52,7 +60,7 @@ export default async function handler(
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`,
+                Authorization: authHeader,
             },
             body: JSON.stringify({
                 query: graphQuery,
