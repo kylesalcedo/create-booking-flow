@@ -56,7 +56,7 @@ export const SelectStore = ({ store }: Props) => {
         const location = store?.location
         const cart = await createCart(location, store)
         await loadSelectedServicesFromCart(cart, [])
-        await setStep(Step.SelectService)
+        await setStep(Step.SearchClient)
     }
 
     const continueSelectServiceFirst = async () => {

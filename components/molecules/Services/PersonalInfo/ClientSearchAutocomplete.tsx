@@ -3,6 +3,7 @@ import { Autocomplete, TextField, CircularProgress } from '@mui/material'
 import { useClientSearch } from 'lib/hooks/useClientSearch'
 import { useFormikContext } from 'formik'
 import { firstNameFieldName, lastNameFieldName, emailFieldName, phoneFieldName } from './ts/constants'
+import { useSetSelectedClientState } from 'lib/state/client'
 
 interface ClientOption {
     id: string
@@ -15,6 +16,7 @@ export const ClientSearchAutocomplete = () => {
     const [inputValue, setInputValue] = useState('')
     const { loading, results } = useClientSearch(inputValue)
     const { setFieldValue } = useFormikContext<any>()
+    const setSelectedClient = useSetSelectedClientState()
 
     const handleSelect = (_: any, value: ClientOption | null) => {
         if (!value) return
@@ -23,6 +25,7 @@ export const ClientSearchAutocomplete = () => {
         setFieldValue(lastNameFieldName, rest.join(' '))
         if (value.email) setFieldValue(emailFieldName, value.email)
         if (value.mobilePhone) setFieldValue(phoneFieldName, value.mobilePhone)
+        setSelectedClient(value)
     }
 
     return (

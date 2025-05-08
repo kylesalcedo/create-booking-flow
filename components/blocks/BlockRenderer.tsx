@@ -9,12 +9,14 @@ import PayAndConfirm from 'components/blocks/PayAndConfirmBlock'
 import SelectServiceBlock from 'components/blocks/SelectServiceBlock'
 import SelectedServicesBlock from 'components/blocks/SelectedServicesBlock'
 import SelectOptionsBlock from 'components/blocks/SelectOptionsBlock'
+import SearchClientBlock from 'components/blocks/SearchClientBlock'
 
 export interface BaseBlockProps {}
 
 const Blocks: Record<Step, ComponentType<BaseBlockProps>> = {
     [Step.LoadingStep]: LoadingStep,
     [Step.ChooseLocation]: ChooseLocation,
+    [Step.SearchClient]: SearchClientBlock,
     [Step.SelectService]: SelectServiceBlock,
     [Step.SelectOptions]: SelectOptionsBlock,
     [Step.SelectedServices]: SelectedServicesBlock,

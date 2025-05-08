@@ -1,6 +1,7 @@
 export enum Step {
     LoadingStep,
     ChooseLocation,
+    SearchClient,
     SelectService,
     SelectOptions,
     SelectedServices,
