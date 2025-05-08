@@ -21,7 +21,7 @@ export default async function handler(
 
     const businessId = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID as string
     const adminKey = process.env.BLVD_ADMIN_API_KEY || process.env.NEXT_PUBLIC_BLVD_API_KEY
-    const adminSecret = process.env.BLVD_ADMIN_API_SECRET
+    const adminSecret = process.env.BLVD_ADMIN_API_SECRET || process.env.BLVD_API_SECRET || process.env.NEXT_PUBLIC_BLVD_API_SECRET
 
     if (!businessId || !adminKey) {
         return res
