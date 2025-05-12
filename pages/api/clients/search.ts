@@ -84,6 +84,11 @@ export default async function handler(
         return res.status(200).json({ clients })
     } catch (error) {
         console.error('Client search error', error)
+        // Log the detailed error
+        if (error instanceof Error) {
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+        }
         return res.status(500).json({ error: 'Internal error' })
     }
 } 
