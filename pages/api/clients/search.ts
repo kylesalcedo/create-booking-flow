@@ -56,6 +56,9 @@ export default async function handler(
         }`
 
     try {
+        console.log(`Fetching from endpoint: ${ADMIN_ENDPOINT}`);
+        console.log(`Authorization header used: ${authHeader.substring(0, 15)}...`); // Log prefix only
+
         const gqlRes = await fetch(ADMIN_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -74,8 +77,13 @@ export default async function handler(
 
         if (!gqlRes.ok) {
             const text = await gqlRes.text()
+            console.error(`Boulevard API returned error ${gqlRes.status}:`, text);
             return res.status(gqlRes.status).json({ error: text })
         }
+
+        // Log status and content-type before parsing
+        console.log(`Boulevard response status: ${gqlRes.status}`);
+        console.log(`Boulevard response content-type: ${gqlRes.headers.get('content-type')}`);
 
         const data = await gqlRes.json()
         const clients =
