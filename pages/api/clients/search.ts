@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-// const ADMIN_ENDPOINT =
-//     process.env.BLVD_ADMIN_ENDPOINT ||
-//     'https://sandbox.joinblvd.com/api/2020-01/admin/graphql'
+const ADMIN_ENDPOINT =
+    process.env.BLVD_ADMIN_ENDPOINT ||
+    'https://sandbox.joinblvd.com/api/2020-01/admin/graphql'
 
 export default async function handler(
     req: NextApiRequest,
@@ -12,77 +12,83 @@ export default async function handler(
         return res.status(405).end()
     }
 
-    // const qParam = req.query.q // For POST, expect query in body
-    // const queryText = Array.isArray(qParam) ? qParam[0] : qParam || ''
-    const { q: queryText } = req.body // Assuming 'q' will be in the POST body
+    const { q: queryText } = req.body
 
-    if (!queryText || typeof queryText !== 'string') { // Added type check
+    if (!queryText || typeof queryText !== 'string') {
         return res.status(400).json({ error: 'Missing or invalid query parameter q in request body' })
     }
 
     const businessId = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID
-    const clientApiKey = process.env.BLVD_CLIENT_API_KEY
+    // Admin credentials from environment variables
+    const adminKey = process.env.BLVD_ADMIN_API_KEY || process.env.NEXT_PUBLIC_BLVD_API_KEY
+    const adminSecret = process.env.BLVD_ADMIN_API_SECRET || process.env.BLVD_API_SECRET || process.env.NEXT_PUBLIC_BLVD_API_SECRET
 
-    if (!businessId || !clientApiKey) {
+    if (!businessId || !adminKey) {
         return res
             .status(500)
-            .json({ error: 'Missing Boulevard credentials on server (Business ID or Client API Key)' })
+            .json({ error: 'Missing Boulevard Admin credentials on server (Business ID or Admin API Key)' })
     }
 
-    const clientApiGraphQLEndpoint = `https://sandbox.joinblvd.com/api/2020-01/${businessId}/client` // This is now treated as a GraphQL endpoint
-
-    const token = Buffer.from(`${clientApiKey}:`).toString('base64')
-    const authHeader = `Basic ${token}`
+    let authHeader: string
+    if (adminSecret) {
+        const token = Buffer.from(`${adminKey}:${adminSecret}`).toString('base64')
+        authHeader = `Basic ${token}`
+    } else {
+        authHeader = `Bearer ${adminKey}`
+    }
 
     const graphQuery = `
-        query SearchClients($queryString: String!, $first: Int!) {
-            clients(query: $queryString, first: $first) {
-                edges {
-                    node {
-                        id
-                        name
-                        email
-                        mobilePhone
-                        active
+        query SearchClients($businessId: ID!, $queryString: QueryString!, $first: Int!) {
+            business(id: $businessId) {
+                clients(query: $queryString, first: $first) {
+                    edges {
+                        node {
+                            id
+                            name
+                            email
+                            mobilePhone
+                            active
+                        }
                     }
                 }
             }
         }`
 
     try {
-        console.log(`Fetching from Client GraphQL endpoint: ${clientApiGraphQLEndpoint}`);
-        console.log(`Using query: ${queryText}`);
-        console.log(`Client API Authorization header used: ${authHeader.substring(0, 15)}...`);
+        console.log(`Fetching from Admin GraphQL endpoint: ${ADMIN_ENDPOINT}`);
+        console.log(`Using businessId: ${businessId}, query: ${queryText}`);
+        console.log(`Admin API Authorization header used: ${authHeader.substring(0, 15)}...`);
 
-        const apiRes = await fetch(clientApiGraphQLEndpoint, {
+        const apiRes = await fetch(ADMIN_ENDPOINT, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json', // Essential for POST with JSON body
+                'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 Authorization: authHeader,
             },
             body: JSON.stringify({
                 query: graphQuery,
                 variables: {
+                    businessId: businessId,
                     queryString: queryText,
-                    first: 10, // Or some other limit
+                    first: 10,
                 },
             }),
         })
 
         if (!apiRes.ok) {
             const errorText = await apiRes.text()
-            console.error(`Boulevard Client GraphQL API returned error ${apiRes.status}:`, errorText);
+            console.error(`Boulevard Admin GraphQL API returned error ${apiRes.status}:`, errorText);
             return res.status(apiRes.status).json({ error: `Boulevard API Error: ${errorText}` })
         }
 
-        console.log(`Boulevard Client GraphQL API response status: ${apiRes.status}`);
+        console.log(`Boulevard Admin GraphQL API response status: ${apiRes.status}`);
         const contentType = apiRes.headers.get('content-type');
-        console.log(`Boulevard Client GraphQL API response content-type: ${contentType}`);
+        console.log(`Boulevard Admin GraphQL API response content-type: ${contentType}`);
 
         if (!contentType || !contentType.includes('application/json')) {
             const responseText = await apiRes.text();
-            console.error('Received non-JSON response from Client GraphQL API:', responseText);
+            console.error('Received non-JSON response from Admin GraphQL API:', responseText);
             return res.status(500).json({ error: 'Received non-JSON response from API', details: responseText });
         }
         
@@ -93,7 +99,7 @@ export default async function handler(
             return res.status(400).json({ error: 'GraphQL query errors', details: data.errors });
         }
         
-        const clients = data?.data?.clients?.edges?.map((e: any) => e.node) || []
+        const clients = data?.data?.business?.clients?.edges?.map((e: any) => e.node) || []
 
         return res.status(200).json({ clients })
     } catch (error) {
