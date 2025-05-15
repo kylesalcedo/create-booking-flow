@@ -8,15 +8,16 @@ export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
 ) {
-    if (req.method !== 'GET') {
+    if (req.method !== 'POST') {
         return res.status(405).end()
     }
 
-    const qParam = req.query.q
-    const queryText = Array.isArray(qParam) ? qParam[0] : qParam || ''
+    // const qParam = req.query.q // For POST, expect query in body
+    // const queryText = Array.isArray(qParam) ? qParam[0] : qParam || ''
+    const { q: queryText } = req.body // Assuming 'q' will be in the POST body
 
-    if (!queryText) {
-        return res.status(400).json({ error: 'Missing query parameter q' })
+    if (!queryText || typeof queryText !== 'string') { // Added type check
+        return res.status(400).json({ error: 'Missing or invalid query parameter q in request body' })
     }
 
     const businessId = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID
@@ -28,68 +29,71 @@ export default async function handler(
             .json({ error: 'Missing Boulevard credentials on server (Business ID or Client API Key)' })
     }
 
-    const clientApiEndpoint = `https://sandbox.joinblvd.com/api/2020-01/${businessId}/client`
-    const searchUrl = `${clientApiEndpoint}?q=${encodeURIComponent(queryText)}`
+    const clientApiGraphQLEndpoint = `https://sandbox.joinblvd.com/api/2020-01/${businessId}/client` // This is now treated as a GraphQL endpoint
 
-    // Build Authorization header for Client API (API Key + colon, base64 encoded)
     const token = Buffer.from(`${clientApiKey}:`).toString('base64')
     const authHeader = `Basic ${token}`
 
-    // const graphQuery = `
-    //     query SearchClients($businessId: ID!, $query: QueryString!, $first: Int!) {
-    //         business(id: $businessId) {
-    //             clients(query: $query, first: $first) {
-    //                 edges {
-    //                     node {
-    //                         id
-    //                         name
-    //                         email
-    //                         mobilePhone
-    //                         active
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }`
+    const graphQuery = `
+        query SearchClients($queryString: String!, $first: Int!) {
+            clients(query: $queryString, first: $first) {
+                edges {
+                    node {
+                        id
+                        name
+                        email
+                        mobilePhone
+                        active
+                    }
+                }
+            }
+        }`
 
     try {
-        console.log(`Fetching from client API endpoint: ${searchUrl}`);
-        console.log(`Client API Authorization header used: ${authHeader.substring(0, 15)}...`); // Log prefix only
+        console.log(`Fetching from Client GraphQL endpoint: ${clientApiGraphQLEndpoint}`);
+        console.log(`Using query: ${queryText}`);
+        console.log(`Client API Authorization header used: ${authHeader.substring(0, 15)}...`);
 
-        const apiRes = await fetch(searchUrl, {
-            method: 'GET', // Assuming GET for client search, adjust if different
+        const apiRes = await fetch(clientApiGraphQLEndpoint, {
+            method: 'POST',
             headers: {
-                // 'Content-Type': 'application/json', // Usually not needed for GET if not sending a body
+                'Content-Type': 'application/json', // Essential for POST with JSON body
                 'Accept': 'application/json',
                 Authorization: authHeader,
             },
-            // body: JSON.stringify({ // Assuming no body for GET, adjust if it's a POST
-            //     query: graphQuery,
-            //     variables: {
-            //         businessId: businessId,
-            //         query: queryText,
-            //         first: 10,
-            //     },
-            // }),
+            body: JSON.stringify({
+                query: graphQuery,
+                variables: {
+                    queryString: queryText,
+                    first: 10, // Or some other limit
+                },
+            }),
         })
 
         if (!apiRes.ok) {
-            const text = await apiRes.text()
-            console.error(`Boulevard Client API returned error ${apiRes.status}:`, text);
-            return res.status(apiRes.status).json({ error: text })
+            const errorText = await apiRes.text()
+            console.error(`Boulevard Client GraphQL API returned error ${apiRes.status}:`, errorText);
+            return res.status(apiRes.status).json({ error: `Boulevard API Error: ${errorText}` })
         }
 
-        console.log(`Boulevard Client API response status: ${apiRes.status}`);
-        console.log(`Boulevard Client API response content-type: ${apiRes.headers.get('content-type')}`);
+        console.log(`Boulevard Client GraphQL API response status: ${apiRes.status}`);
+        const contentType = apiRes.headers.get('content-type');
+        console.log(`Boulevard Client GraphQL API response content-type: ${contentType}`);
 
+        if (!contentType || !contentType.includes('application/json')) {
+            const responseText = await apiRes.text();
+            console.error('Received non-JSON response from Client GraphQL API:', responseText);
+            return res.status(500).json({ error: 'Received non-JSON response from API', details: responseText });
+        }
+        
         const data = await apiRes.json()
-        // Adapt this part based on the actual structure of the Client API response
-        // For example, if it's a direct array: const clients = data
-        // If it's an object like { results: [...] }: const clients = data.results
-        // If it's an object like { clients: [...] }: const clients = data.clients
-        // For now, let's assume it might be directly an array or an object with a 'clients' property
-        const clients = Array.isArray(data) ? data : data?.clients || []
 
+        if (data.errors) {
+            console.error('GraphQL errors:', data.errors);
+            return res.status(400).json({ error: 'GraphQL query errors', details: data.errors });
+        }
+        
+        const clients = data?.data?.clients?.edges?.map((e: any) => e.node) || []
 
         return res.status(200).json({ clients })
     } catch (error) {
