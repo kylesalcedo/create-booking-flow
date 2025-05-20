@@ -36,7 +36,7 @@ export const CurrentSessionDisplayPanel = ({ sessions, activeSessionId }: Curren
                             Staff: {activeSession.staff.name || 'Any Staff'}
                         </Typography>
                     )}
-                    {activeSession.selectedTime && activeSession.locationDisplayTime && (
+                    {activeSession.selectedTime && activeSession.locationDisplayTime && activeSession.date && (
                         <Chip 
                             label={`Time Selected: ${activeSession.locationDisplayTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric' })} on ${activeSession.date.toLocaleDateString()}`}
                             color="success"
