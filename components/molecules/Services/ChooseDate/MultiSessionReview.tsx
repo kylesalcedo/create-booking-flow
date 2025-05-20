@@ -40,6 +40,12 @@ export const MultiSessionReview = ({ onAddAnotherSessionClicked }: MultiSessionR
                 // TODO optional staff variant assignment
 
                 // Reserve start time for the single item
+                if (!session.selectedTime) {
+                    console.error(`Session ${session.id} is pending but has no selectedTime.`);
+                    updateSessionStatus(session.id, 'failed', { error: 'Missing selected time for reservation.' });
+                    hasError = true;
+                    continue; // Skip to the next session
+                }
                 await cartAfterAdd.reserveBookableItems(session.selectedTime);
 
                 // If no payment required, checkout immediately to create appointment
