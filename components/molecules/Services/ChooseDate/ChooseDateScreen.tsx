@@ -103,9 +103,10 @@ export default function ChooseDateScreen() {
                 </>
             }
             rightPanelCaption={
-                activeSessionExists ? "Select an availability" 
-                : allSessionsTrulyScheduled ? "Ready to Continue" 
-                : (sessions && sessions.length > 0 ? "Select a Session" : "No Sessions")
+                `Sessions: ${sessions?.length || 0}, ActiveID: ${activeSessionId ? 'Set' : 'Null'}, Exists: ${activeSessionExists}, AllDone: ${allSessionsTrulyScheduled}`
+                // activeSessionExists ? "Select an availability" 
+                // : allSessionsTrulyScheduled ? "Ready to Continue" 
+                // : (sessions && sessions.length > 0 ? "Select a Session" : "No Sessions")
             }
             rightPanelBtnCaption={rightPanelBtnCaption()}
             showBottom={showContinueButton}
