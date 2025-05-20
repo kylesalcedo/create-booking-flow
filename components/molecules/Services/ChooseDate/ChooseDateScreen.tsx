@@ -24,6 +24,9 @@ export default function ChooseDateScreen() {
     const { sessions } = useMultiSessionManager();
     const [activeSessionId, setActiveSessionId] = useActiveMultiSessionId();
 
+    // Find the active session object once
+    const activeSession = sessions?.find(s => s.id === activeSessionId);
+
     useEffect(() => {
         if (sessions && sessions.length > 0) {
             const currentActiveSession = sessions.find(s => s.id === activeSessionId);
@@ -54,19 +57,18 @@ export default function ChooseDateScreen() {
     }, [sessions, activeSessionId, setActiveSessionId]);
 
     const allSessionsTrulyScheduled = sessions && sessions.length > 0 && sessions.every(s => !!s.selectedTime);
-    const activeSessionExists = !!(activeSessionId && sessions && sessions.find(s => s.id === activeSessionId));
+    const activeSessionExists = !!activeSession; // Use the derived activeSession
 
     const rightPanelBtnCaption = () => {
         if (allSessionsTrulyScheduled) return "Continue to Next Step";
 
         // Caption for the button when an active session is selected and a time slot is picked for IT
-        const currentSession = sessions?.find(s => s.id === activeSessionId);
-        if (currentSession && !currentSession.selectedTime && selectedStaffTime?.locationTime) {
+        if (activeSession && !activeSession.selectedTime && selectedStaffTime?.locationTime) {
             return `Confirm ${formatDateFns(
                 selectedStaffTime.locationTime,
                 selectedStore?.location.tz,
                 'h:mmaaa'
-            )} for ${currentSession.service.item.name}`;
+            )} for ${activeSession.service.item.name}`;
         }
         return 'Select a Time'; // Default when no specific time slot is picked for the active session yet
     };
@@ -103,10 +105,8 @@ export default function ChooseDateScreen() {
                 </>
             }
             rightPanelCaption={
-                `Sessions: ${sessions?.length || 0}, ActiveID: ${activeSessionId ? 'Set' : 'Null'}, Exists: ${activeSessionExists}, AllDone: ${allSessionsTrulyScheduled}`
-                // activeSessionExists ? "Select an availability" 
-                // : allSessionsTrulyScheduled ? "Ready to Continue" 
-                // : (sessions && sessions.length > 0 ? "Select a Session" : "No Sessions")
+                `Sess: ${sessions?.length || 0}, AS_ID: ${activeSessionId ? 'Set' : 'Null'}, AS_Exists: ${activeSessionExists}, AllDone: ${allSessionsTrulyScheduled}` +
+                (activeSession ? ` | ServID: ${activeSession.service.id.substring(0,5)} StaffID: ${activeSession.staff?.id?.substring(0,5) || 'N/A'}` : '')
             }
             rightPanelBtnCaption={rightPanelBtnCaption()}
             showBottom={showContinueButton}
