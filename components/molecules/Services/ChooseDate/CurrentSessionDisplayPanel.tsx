@@ -68,12 +68,19 @@ export const CurrentSessionDisplayPanel = ({ sessions, activeSessionId }: Curren
                             secondary={
                                 <> 
                                     {session.staff ? `Staff: ${session.staff.name || 'Any'}` : 'Any Staff'}
-                                    {session.selectedTime && session.date && session.locationDisplayTime && (
+                                    {session.selectedTime && session.date && session.locationDisplayTime ? (
                                         <Typography component="span" display="block" variant="caption" color="text.secondary">
                                             {`Time: ${session.locationDisplayTime.toLocaleTimeString('en-US', {hour: 'numeric', minute: 'numeric'})} on ${new Date(session.date).toLocaleDateString()}`}
                                         </Typography>
-                                    )}
-                                    {!session.selectedTime && (
+                                    ) : session.selectedTime && session.locationDisplayTime ? (
+                                        <Typography component="span" display="block" variant="caption" color="text.secondary">
+                                            {`Time: ${session.locationDisplayTime.toLocaleTimeString('en-US', {hour: 'numeric', minute: 'numeric'})} (Date not set)`}
+                                        </Typography>
+                                    ) : session.selectedTime ? (
+                                        <Typography component="span" display="block" variant="caption" color="text.secondary">
+                                            Time selected (Details pending)
+                                        </Typography>
+                                    ) : (
                                         <Typography component="span" display="block" variant="caption" color="error">
                                             Pending Time Selection
                                         </Typography>
