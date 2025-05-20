@@ -1,8 +1,9 @@
-import { Box, Theme } from '@mui/material'
-import { SelectAvailability } from 'components/molecules/Services/ChooseDate/ManyDays/SelectAvailability'
 import React from 'react'
+import { SelectAvailability } from 'components/molecules/Services/ChooseDate/ManyDays/SelectAvailability'
+import { Box, Theme } from '@mui/material'
 import { makeStyles } from '@mui/styles'
-import { stepScreen } from 'constants/styles'
+// import { stepScreen } from 'constants/styles' // Not needed if styles are local
+import { MultiSessionReview } from '../MultiSessionReview'
 
 const useStyles = makeStyles((theme: Theme) => ({
     rightPanelWrapper: {
@@ -16,15 +17,21 @@ const useStyles = makeStyles((theme: Theme) => ({
             display: 'none',
         },
     },
-    blurScreen: stepScreen(theme).blurScreen,
-    loader: stepScreen(theme).loader,
+    // blurScreen: stepScreen(theme).blurScreen, // Keep if used, or remove
+    // loader: stepScreen(theme).loader,       // Keep if used, or remove
 }))
 
-export const ShowTimeForManyDaysComponent = () => {
+interface ShowTimeForManyDaysComponentProps {
+    activeSessionId: string | null;
+}
+
+export const ShowTimeForManyDaysComponent = ({ activeSessionId }: ShowTimeForManyDaysComponentProps) => {
     const classes = useStyles()
     return (
         <Box className={classes.rightPanelWrapper}>
-            <SelectAvailability />
+            {/* Pass activeSessionId to SelectAvailability */}
+            <SelectAvailability activeSessionId={activeSessionId} /> 
+            <MultiSessionReview />
         </Box>
     )
 }

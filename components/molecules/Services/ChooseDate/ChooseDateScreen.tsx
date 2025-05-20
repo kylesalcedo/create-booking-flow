@@ -40,7 +40,7 @@ export default function ChooseDateScreen() {
                         <ShowTimeForOneDayComponent />
                     )}
                     {dateTimeType === DateTimeType.ShowTimeForManyDays && (
-                        <ShowTimeForManyDaysComponent />
+                        <ShowTimeForManyDaysComponent activeSessionId={activeSessionId} />
                     )}
                 </>
             }

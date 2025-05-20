@@ -1,41 +1,60 @@
-import { atom, useRecoilState } from 'recoil';
+import { atom, useRecoilState, useSetRecoilState, useRecoilValue } from 'recoil';
 import { MultiSessionItem } from './types';
-import { nanoid } from 'nanoid'; // For generating unique IDs
+import { v4 as uuidv4 } from 'uuid';
 
-export const multiSessionItemsState = atom<MultiSessionItem[]> ({
-    key: 'multiSessionItemsState',
+export const multiSessionState = atom<MultiSessionItem[]>({
+    key: 'multiSessionState',
     default: [],
 });
 
-// Custom hook to manage multi-session items
 export const useMultiSessionManager = () => {
-    const [sessions, setSessions] = useRecoilState(multiSessionItemsState);
+    const [sessions, setSessions] = useRecoilState(multiSessionState);
 
-    const addSession = (sessionData: Omit<MultiSessionItem, 'id' | 'status' | 'confirmationDetails'>) => {
+    const addSession = (sessionData: Omit<MultiSessionItem, 'id' | 'status' | 'confirmationDetails'>): string => {
+        const id = uuidv4();
         const newSession: MultiSessionItem = {
             ...sessionData,
-            id: nanoid(),
+            id,
             status: 'pending',
+            confirmationDetails: null,
         };
         setSessions((prevSessions) => [...prevSessions, newSession]);
-        return newSession.id; // Return ID of the newly added session
+        return id;
     };
 
     const removeSession = (sessionId: string) => {
-        setSessions((prevSessions) => prevSessions.filter(session => session.id !== sessionId));
+        setSessions((prevSessions) => prevSessions.filter((session) => session.id !== sessionId));
     };
 
-    const updateSessionStatus = (sessionId: string, status: MultiSessionItem['status'], confirmationDetails?: any) => {
+    const updateSessionStatus = (sessionId: string, status: MultiSessionItem['status'], confirmationDetails: MultiSessionItem['confirmationDetails'] = null) => {
         setSessions((prevSessions) =>
-            prevSessions.map(session =>
+            prevSessions.map((session) =>
                 session.id === sessionId ? { ...session, status, confirmationDetails } : session
+            )
+        );
+    };
+
+    const updateSessionDetails = (sessionId: string, details: Partial<Omit<MultiSessionItem, 'id'>>) => {
+        setSessions((prevSessions) =>
+            prevSessions.map((session) =>
+                session.id === sessionId ? { ...session, ...details } : session
             )
         );
     };
 
     const clearSessions = () => {
         setSessions([]);
-    }
+    };
 
-    return { sessions, addSession, removeSession, updateSessionStatus, clearSessions };
-}; 
+    return {
+        sessions,
+        addSession,
+        removeSession,
+        updateSessionStatus,
+        updateSessionDetails,
+        clearSessions,
+    };
+};
+
+export const useMultiSessionsValue = () => useRecoilValue(multiSessionState);
+export const useSetMultiSessions = () => useSetRecoilState(multiSessionState); 

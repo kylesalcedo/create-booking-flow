@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Typography, Box, Button, Popover, Theme } from '@mui/material'
 import { makeStyles } from '@mui/styles'
 import { styled } from '@mui/material/styles'
@@ -10,15 +10,17 @@ import {
     useTimesAreLoadingState,
 } from 'lib/state/staffTime'
 import { useCartStoreState } from 'lib/state/store'
-import { SelectDate } from 'components/molecules/Services/ChooseDate/SelectDate'
+import { SelectDate, Props as SelectDateProps } from 'components/molecules/Services/ChooseDate/SelectDate'
 import { isSameDay } from 'date-fns'
-import { CartBookableDate } from '@boulevard/blvd-book-sdk/lib/cart'
+import { CartBookableDate, Cart, CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
 import { useCartState } from 'lib/state/cart'
 import { sortByDate } from 'lib/utils/sortUtils'
 import formatDateFns from 'lib/utils/formatDateFns'
 import { useMobile } from 'lib/utils/useMobile'
 import { useTransition, animated, config } from 'react-spring'
 import { MultiSessionReview } from '../MultiSessionReview'
+import { useMultiSessionManager } from 'lib/state/multiple-sessions'
+import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
 const SelectDateButton = styled(Button)(() => ({
     width: 145,
@@ -87,28 +89,41 @@ const useStyles = makeStyles((theme: Theme) => ({
     },
 }))
 
-export const SelectAvailability = () => {
+interface SelectAvailabilityProps {
+    activeSessionId: string | null;
+}
+
+export const SelectAvailability = ({ activeSessionId }: SelectAvailabilityProps) => {
     const { isMobile } = useMobile()
     const classes = useStyles({ isMobile })
     const staffTimesArray = useStaffTimesState()
     const selectedStore = useCartStoreState()
-    const [anchorEl, setAnchorEl] = useState(null)
+    const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null)
     const [changeOpacity, setChangeOpacity] = useState(false)
     const [filteredDate, setFilteredDate] = useState<Date | undefined>(
         undefined
     )
     const [isShowSeeMoreButton, setIsShowSeeMoreButton] = useState(true)
-    const { loadStaffTimes, loadNextTimesPage } = useStaffTimes()
-    const cart = useCartState()
+    const { loadStaffTimes, loadNextTimesPage, clearStaffTimes } = useStaffTimes()
+    const cart = useCartState() as Cart | undefined
     const timesAreLoading = useTimesAreLoadingState()
+
+    const { sessions } = useMultiSessionManager();
+    const activeSession: MultiSessionItem | undefined = sessions.find(s => s.id === activeSessionId);
+
+    useEffect(() => {
+        clearStaffTimes();
+        setFilteredDate(undefined);
+    }, [activeSessionId, clearStaffTimes]);
+
     const sortedSelectTimes = staffTimesArray
         .concat()
         .filter((x) => {
-            return filteredDate === undefined || isSameDay(filteredDate, x.date)
+            return filteredDate !== undefined && isSameDay(filteredDate, x.date);
         })
-        .sort(sortByDate)
+        .sort(sortByDate);
 
-    const handleSelectDateButtonClick = (event) => {
+    const handleSelectDateButtonClick = (event: React.MouseEvent<HTMLButtonElement>) => {
         setChangeOpacity(true)
         setAnchorEl(event.currentTarget)
     }
@@ -126,25 +141,29 @@ export const SelectAvailability = () => {
     ) => {
         handleClose()
         setFilteredDate(day)
-
-        const staffDate = {
-            date: day,
-            cartBookableDate: cartBookableDate,
+        if (activeSession && cart && selectedStore) {
+            const staffDate = { date: day, cartBookableDate };
+            console.log('Loading staff times for active session:', activeSession.service.item.name, 'on day:', day);
+            await loadStaffTimes(cart, staffDate, selectedStore.location.tz);
+        } else {
+            console.log('No active session or cart/store, clearing times.');
+            clearStaffTimes();
         }
-        await loadStaffTimes(cart, staffDate, selectedStore?.location.tz)
     }
 
     const onClearDateClick = () => {
         setFilteredDate(undefined)
+        clearStaffTimes()
     }
 
     const seeMoreDays = async () => {
         setChangeOpacity(false)
-        const hasMoreDays = await loadNextTimesPage(
-            cart,
-            selectedStore?.location.tz
-        )
-        setIsShowSeeMoreButton(hasMoreDays)
+        if (cart && selectedStore) {
+            const hasMore = await loadNextTimesPage(cart, selectedStore.location.tz);
+            setIsShowSeeMoreButton(hasMore);
+        } else {
+            setIsShowSeeMoreButton(false);
+        }
     }
 
     const maxHeightValue = 200
@@ -174,7 +193,9 @@ export const SelectAvailability = () => {
                         : classes.selectTimeDesktop
                 }
             >
-                <Typography variant="h2">Select a Time</Typography>
+                <Typography variant="h2">
+                    Select a Time {activeSession ? `for ${activeSession.service.item.name}` : ''}
+                </Typography>
                 <SelectDateButton
                     variant="outlined"
                     disableRipple={true}
@@ -187,6 +208,7 @@ export const SelectAvailability = () => {
                         )
                     }
                     onClick={handleSelectDateButtonClick}
+                    disabled={!activeSession}
                 >
                     {filteredDate
                         ? formatDateFns(
@@ -198,19 +220,18 @@ export const SelectAvailability = () => {
                 </SelectDateButton>
                 <Popover
                     id={id}
-                    className={classes.popover}
                     open={open}
                     anchorEl={anchorEl}
                     onClose={handleClose}
                     anchorOrigin={{
                         vertical: 'bottom',
-                        horizontal: 'right',
+                        horizontal: 'center',
                     }}
                     transformOrigin={{
                         vertical: 'top',
-                        horizontal: 'right',
+                        horizontal: 'center',
                     }}
-                    sx={{ mt: 1, '& .MuiPaper-root': { width: 352 } }}
+                    className={classes.popover}
                 >
                     <SelectDate
                         onDateSelect={onDayClick}
@@ -243,26 +264,33 @@ export const SelectAvailability = () => {
                             onClearDateClick={onClearDateClick}
                             filteredDate={filteredDate}
                             key={`selectTime-${staffTimesItem.day}-${staffTimesItem.month}-${staffTimesItem.year}`}
+                            activeSession={activeSession}
                         />
                     </animated.div>
                 ))}
-                {!filteredDate && isShowSeeMoreButton && !timesAreLoading && (
-                    <Box
-                        display="flex"
-                        flexDirection="row"
-                        justifyContent="center"
-                    >
-                        <LoadMoreButton
-                            variant="outlined"
-                            onClick={seeMoreDays}
-                            sx={{ mt: 5, mb: 3, borderRadius: 0 }}
-                        >
-                            Load more days
-                        </LoadMoreButton>
-                    </Box>
+                {sortedSelectTimes.length === 0 && !timesAreLoading && filteredDate && (
+                    <Typography sx={{ textAlign: 'center', pt: 2 }}>
+                        No availability for the selected date and service.
+                    </Typography>
                 )}
+                {sortedSelectTimes.length === 0 && !timesAreLoading && !filteredDate && activeSession && (
+                    <Typography sx={{ textAlign: 'center', pt: 2 }}>
+                        Please select a date to see availability for {activeSession.service.item.name}.
+                    </Typography>
+                )}
+                {timesAreLoading && (
+                    <Typography sx={{ textAlign: 'center', pt: 2 }}>Loading...</Typography>
+                )}
+                {isShowSeeMoreButton &&
+                    staffTimesArray.length > 0 &&
+                    !filteredDate && (
+                        <Box sx={{ textAlign: 'center', pt: 2, pb: 2 }}>
+                            <LoadMoreButton onClick={seeMoreDays} disabled={!activeSession}>
+                                See More Days
+                            </LoadMoreButton>
+                        </Box>
+                    )}
             </Box>
-            <MultiSessionReview />
         </>
     )
 }

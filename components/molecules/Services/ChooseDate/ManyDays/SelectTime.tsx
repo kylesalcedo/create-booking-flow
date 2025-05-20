@@ -1,4 +1,4 @@
-import { Typography, Box } from '@mui/material'
+import { Typography, Box, Grid } from '@mui/material'
 import { makeStyles } from '@mui/styles'
 import { StaffTimes, StaffTime as StaffTimeType } from 'lib/state/staffTime/types'
 import formatDateFns from 'lib/utils/formatDateFns'
@@ -6,10 +6,11 @@ import { Store } from 'lib/state/store/types'
 import { differenceInDays, isSameDay } from 'date-fns'
 import { utcToZonedTime } from 'date-fns-tz'
 import { useMobile } from 'lib/utils/useMobile'
-import { DisplayTime } from 'components/molecules/Services/ChooseDate/DisplayTime'
+import { DisplayTime } from 'components/molecules/Services/ChooseDate/ManyDays/DisplayTime'
 import { useSelectedServices } from 'lib/state/services'
 import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
 import React from 'react'
+import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
 const useStyles = makeStyles(() => ({
     timeBlock: {
@@ -34,11 +35,12 @@ const useStyles = makeStyles(() => ({
     },
 }))
 
-interface Props {
+export interface Props {
     staffTimes: StaffTimes
     store: Store | undefined
     onClearDateClick: () => void
-    filteredDate?: Date
+    filteredDate: Date | undefined
+    activeSession: MultiSessionItem | undefined
 }
 
 export const SelectTime = ({
@@ -46,6 +48,7 @@ export const SelectTime = ({
     store,
     onClearDateClick,
     filteredDate,
+    activeSession,
 }: Props) => {
     const { isMobile } = useMobile()
     const classes = useStyles()
@@ -116,6 +119,7 @@ export const SelectTime = ({
                         store={store}
                         currentSelectedDate={currentDateForTheseSlots}
                         currentService={currentService}
+                        activeSession={activeSession}
                     />
                 ))}
                 {individualTimeSlots.length === 0 && (

@@ -348,15 +348,23 @@ export const useCartMethods = () => {
         cart: Cart | undefined,
         cartBookableTime: CartBookableTime | undefined,
         cartStoreState: Store | undefined
-    ) => {
-        if (!cart || !cartBookableTime) {
-            return
+    ): Promise<Cart | undefined> => {
+        if (!cart || !cartBookableTime || !cartStoreState) {
+            return undefined;
         }
-        const updatedCart = await cart?.reserveBookableItems(cartBookableTime)
-        setCart(updatedCart)
-        appointmentTimeSelected({
-            location: cartStoreState?.location,
-        }).then() //don't wait for op to be completed
+        try {
+            const updatedCart = await cart.reserveTime(cartBookableTime);
+            setCart(updatedCart); 
+            appointmentTimeSelected(
+                updatedCart,
+                cartStoreState,
+                cartTimeToDate(cartBookableTime.startTime)
+            );
+            return updatedCart;
+        } catch (error) {
+            console.error('Error reserving bookable time:', error);
+            return undefined;
+        }
     }
 
     const getAnswer = (bookingQuestion: CartBookingQuestion): any => {

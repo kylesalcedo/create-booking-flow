@@ -1,12 +1,12 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { Modifiers, DayPicker, SelectSingleEventHandler } from 'react-day-picker'
 import { Theme, Box } from '@mui/material'
 import { makeStyles } from '@mui/styles'
 import 'react-day-picker/dist/style.css'
-import { useCartState } from 'lib/state/cart'
-import { useCartStoreState } from 'lib/state/store'
-import { useStaffDates } from 'lib/state/staffDate'
-import { CartBookableDate } from '@boulevard/blvd-book-sdk/lib/cart'
+import { useStaffDates, staffDatesState as globalStaffDatesAtom } from 'lib/state/staffDate'
+import { CartBookableDate, CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
+import { useRecoilValue } from 'recoil'
+import { isSameDay } from 'date-fns'
 
 const useStyles = makeStyles((theme: Theme) => ({
     dayPickerWrapper: {
@@ -87,53 +87,49 @@ const useStyles = makeStyles((theme: Theme) => ({
     },
 }))
 
-interface Props {
+export interface Props {
     onDateSelect: (day: Date, cartBookableDate: CartBookableDate) => void
     initialSelectedDate?: Date
 }
 
 export const SelectDate = ({ onDateSelect, initialSelectedDate }: Props) => {
     const classes = useStyles()
+    const staffDatesFromGlobalState = useRecoilValue(globalStaffDatesAtom)
+    const { loadStaffDates } = useStaffDates()
+
     const fromMonth = useMemo(() => {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        return date;
-    }, []);
+        const today = new Date()
+        today.setDate(1)
+        return today
+    }, [])
 
-    const cartState = useCartState()
-    const cartStoreState = useCartStoreState()
-    
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialSelectedDate)
-    const [displayedMonth, setDisplayedMonth] = useState(
-        initialSelectedDate ?? new Date()
-    )
-    const { loadStaffDates, getStaffDateState } = useStaffDates()
-    const staffDatesStore = getStaffDateState()
-    const [refresher, setRefresher] = useState(0)
-    
-    const onMonthChange = async (date: Date) => {
-        setDisplayedMonth(date)
-        await loadStaffDates(
-            date.getFullYear(),
-            date.getMonth(),
-            cartState,
-            cartStoreState?.location.tz
-        )
-        setRefresher(refresher + 1)
-    }
+    const [displayedMonth, setDisplayedMonth] = useState<Date>(initialSelectedDate || fromMonth)
 
-    const getAllowedDaysInMonth = useCallback((day: Date) => {
-        if (staffDatesStore === undefined) {
-            return []
+    useEffect(() => {
+        if (initialSelectedDate) {
+            setDisplayedMonth(initialSelectedDate)
+            setSelectedDate(initialSelectedDate)
+        } else {
+            setDisplayedMonth(fromMonth)
+            setSelectedDate(undefined)
         }
-        return staffDatesStore
+    }, [initialSelectedDate, fromMonth])
+    
+    const getAllowedDaysInMonth = useCallback((month: Date): { date: Date; cartBookableDate: CartBookableDate }[] => {
+        return staffDatesFromGlobalState
             .filter(
-                (x) =>
-                    x.month === day.getUTCMonth() &&
-                    x.year === day.getUTCFullYear()
+                (staffDatesItem) =>
+                    staffDatesItem.year === month.getUTCFullYear() &&
+                    staffDatesItem.month === month.getUTCMonth()
             )
-            .flatMap((x) => x.dates)
-    }, [staffDatesStore])
+            .flatMap((staffDatesItem) => staffDatesItem.dates)
+            .map((staffDate) => ({ date: new Date(staffDate.date), cartBookableDate: staffDate.cartBookableDate! }))
+    }, [staffDatesFromGlobalState])
+
+    const onMonthChange = async (month: Date) => {
+        setDisplayedMonth(month)
+    }
 
     const handleDateSelect: SelectSingleEventHandler = (day, selectedDay, activeModifiers) => {
         if (activeModifiers.disabled || !selectedDay) {
@@ -142,16 +138,13 @@ export const SelectDate = ({ onDateSelect, initialSelectedDate }: Props) => {
         }
         
         const daysInMonth = getAllowedDaysInMonth(selectedDay)
-        const matchingBookableDates = daysInMonth.filter(
-            (x) =>
-                x.date.getUTCDate() === selectedDay.getUTCDate() &&
-                x.date.getUTCMonth() === selectedDay.getUTCMonth() &&
-                x.date.getUTCFullYear() == selectedDay.getUTCFullYear()
+        const matchingBookableDateEntry = daysInMonth.find(
+            (x) => isSameDay(x.date, selectedDay)
         )
         
-        if (matchingBookableDates.length > 0) {
+        if (matchingBookableDateEntry && matchingBookableDateEntry.cartBookableDate) {
             setSelectedDate(selectedDay)
-            onDateSelect(selectedDay, matchingBookableDates[0].cartBookableDate)
+            onDateSelect(selectedDay, matchingBookableDateEntry.cartBookableDate)
         } else {
             setSelectedDate(undefined)
         }
@@ -162,10 +155,7 @@ export const SelectDate = ({ onDateSelect, initialSelectedDate }: Props) => {
             return true
         }
         const daysInMonth = getAllowedDaysInMonth(day)
-        const hasDay = daysInMonth.some(
-            (x) => x.date.getUTCDate() === day.getUTCDate()
-        )
-        return !hasDay
+        return !daysInMonth.some(d => isSameDay(d.date, day))
     }, [fromMonth, getAllowedDaysInMonth])
 
     return (
