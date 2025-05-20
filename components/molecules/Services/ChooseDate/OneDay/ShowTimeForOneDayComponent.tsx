@@ -23,6 +23,10 @@ interface StylesProps {
     isMobile: boolean
 }
 
+interface ShowTimeForOneDayComponentProps {
+    activeSessionId: string | null;
+}
+
 const useStyles = makeStyles((theme: Theme) => ({
     root: {
         overflowY: 'scroll',
@@ -76,7 +80,7 @@ const useStyles = makeStyles((theme: Theme) => ({
     },
 }))
 
-export const ShowTimeForOneDayComponent = () => {
+export const ShowTimeForOneDayComponent = ({ activeSessionId }: ShowTimeForOneDayComponentProps) => {
     const { isMobile } = useMobile()
     const classes = useStyles({ isMobile })
     const cart = useCartState()

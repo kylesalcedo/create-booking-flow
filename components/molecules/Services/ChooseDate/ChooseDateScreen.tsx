@@ -9,9 +9,10 @@ import formatDateFns from 'lib/utils/formatDateFns'
 import { useCartStoreState } from 'lib/state/store'
 import { useSelectedStaffTimeState } from 'lib/state/staffTime'
 import { WorkshopPanel } from 'components/molecules/Services/ChooseDate/WorkshopPanel'
-import { MultiSessionSelectorPanel } from './MultiSessionSelectorPanel'
+import { CurrentSessionDisplayPanel } from './CurrentSessionDisplayPanel'
 import { useMultiSessionManager } from 'lib/state/multiple-sessions'
-import { useActiveMultiSessionIdValue, useSetActiveMultiSessionId } from 'lib/state/multiple-sessions/activeSession'
+import { useActiveMultiSessionId, useActiveMultiSessionIdValue } from 'lib/state/multiple-sessions/activeSession'
+import { Typography } from '@mui/material'
 
 export default function ChooseDateScreen() {
     const { isMobile } = useMobile()
@@ -21,36 +22,59 @@ export default function ChooseDateScreen() {
     const selectedStore = useCartStoreState()
 
     const { sessions } = useMultiSessionManager();
-    const activeSessionId = useActiveMultiSessionIdValue();
-    const setActiveSessionId = useSetActiveMultiSessionId();
+    const [activeSessionId, setActiveSessionId] = useActiveMultiSessionId();
 
     useEffect(() => {
+        // If there's no active session ID, and there are sessions,
+        // set the first session without a selected time as active.
+        // If all have times, set the first session as active.
         if (!activeSessionId && sessions && sessions.length > 0) {
-            setActiveSessionId(sessions[0].id);
+            const firstSessionToSchedule = sessions.find(session => !session.selectedTime);
+            if (firstSessionToSchedule) {
+                setActiveSessionId(firstSessionToSchedule.id);
+            } else {
+                setActiveSessionId(sessions[0].id);
+            }
         }
     }, [sessions, activeSessionId, setActiveSessionId]);
+
+    const allSessionsScheduled = sessions.every(s => !!s.selectedTime);
+
+    const rightPanelBtnCaption = () => {
+        if (allSessionsScheduled) return "Continue to Next Step";
+        if (selectedStaffTime?.locationTime) {
+            return `Continue with ${formatDateFns(
+                selectedStaffTime.locationTime,
+                selectedStore?.location.tz,
+                'h:mmaaa'
+            )}`;
+        }
+        return 'Select a Time';
+    };
 
     return (
         <WithLayout
             isShowLoader={false}
-            leftPanel={<MultiSessionSelectorPanel />}
+            leftPanel={<CurrentSessionDisplayPanel sessions={sessions} activeSessionId={activeSessionId} />}
             rightPanel={
                 <>
-                    {dateTimeType === DateTimeType.ShowTimeForOneDay && (
-                        <ShowTimeForOneDayComponent />
+                    {activeSessionId && dateTimeType === DateTimeType.ShowTimeForOneDay && (
+                        <ShowTimeForOneDayComponent activeSessionId={activeSessionId} />
                     )}
-                    {dateTimeType === DateTimeType.ShowTimeForManyDays && (
+                    {activeSessionId && dateTimeType === DateTimeType.ShowTimeForManyDays && (
                         <ShowTimeForManyDaysComponent activeSessionId={activeSessionId} />
+                    )}
+                    {!activeSessionId && sessions.length > 0 && !allSessionsScheduled && (
+                        <Typography sx={{p:2, textAlign: 'center'}}>Please wait, selecting next session...</Typography>
+                    )}
+                    {!activeSessionId && allSessionsScheduled && (
+                        <Typography sx={{p:2, textAlign: 'center'}}>All appointments have times selected. Click Continue.</Typography>
                     )}
                 </>
             }
-            rightPanelCaption="Select an availability"
-            rightPanelBtnCaption={`Continue with ${selectedStaffTime?.locationTime ? formatDateFns(
-                selectedStaffTime?.locationTime,
-                selectedStore?.location.tz,
-                'h:mmaaa'
-            ) : 'selected time'}`}
-            showBottom={!!selectedStaffTime}
+            rightPanelCaption={activeSessionId ? "Select an availability" : (allSessionsScheduled ? "Ready to Continue" : "Loading sessions...")}
+            rightPanelBtnCaption={rightPanelBtnCaption()}
+            showBottom={!!activeSessionId || allSessionsScheduled}
             addBackArrow={isMobile}
             backArrowStep={Step.SelectedServices}
             workshopPanel={<WorkshopPanel />}
