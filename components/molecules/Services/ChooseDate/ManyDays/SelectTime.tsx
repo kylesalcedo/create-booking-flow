@@ -7,8 +7,6 @@ import { differenceInDays, isSameDay } from 'date-fns'
 import { utcToZonedTime } from 'date-fns-tz'
 import { useMobile } from 'lib/utils/useMobile'
 import { DisplayTime } from 'components/molecules/Services/ChooseDate/ManyDays/DisplayTime'
-import { useSelectedServices } from 'lib/state/services'
-import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
 import React from 'react'
 import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
@@ -52,9 +50,6 @@ export const SelectTime = ({
 }: Props) => {
     const { isMobile } = useMobile()
     const classes = useStyles()
-    const { selectedServicesStateValue } = useSelectedServices()
-
-    const currentService: CartBookableItem | undefined = selectedServicesStateValue?.[0]
 
     const individualTimeSlots = staffTimes.times
     const currentDateForTheseSlots = staffTimes.date
@@ -71,10 +66,12 @@ export const SelectTime = ({
         return `${diff + 1}d away`
     }
 
-    if (!currentService) {
+    if (!activeSession || !activeSession.service) {
         return (
             <Box sx={{ pt: 3, pb: 2 }} className={classes.timeBlock}>
-                <Typography sx={{ textAlign: 'center', width: '100%' }}>Please select a service first.</Typography>
+                <Typography sx={{ textAlign: 'center', width: '100%' }}>
+                    Please select an active session with a service.
+                </Typography>
             </Box>
         )
     }
@@ -118,7 +115,6 @@ export const SelectTime = ({
                         time={timeSlot}
                         store={store}
                         currentSelectedDate={currentDateForTheseSlots}
-                        currentService={currentService}
                         activeSession={activeSession}
                     />
                 ))}

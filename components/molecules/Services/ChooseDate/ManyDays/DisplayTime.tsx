@@ -8,7 +8,7 @@ import { useCartMethods, useCartState } from 'lib/state/cart'
 import { useAppConfig } from 'lib/state/config'
 import { useFlowStep } from 'lib/state/booking-flow'
 import { Step } from 'lib/state/booking-flow/types'
-import { CartBookableItem, Cart, CartBookableTime } from '@boulevard/blvd-book-sdk/lib/cart'
+import { Cart, CartBookableTime } from '@boulevard/blvd-book-sdk/lib/cart'
 import { useMultiSessionManager } from 'lib/state/multiple-sessions'
 import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
@@ -40,8 +40,8 @@ export const DisplayTime = ({ time, store, currentSelectedDate, activeSession }:
             console.error('No cartBookableTime available for this time slot.')
             return
         }
-        if (!activeSession) {
-            console.error('No active session to associate time with.')
+        if (!activeSession || !activeSession.service) {
+            console.error('No active session or active session service to associate time with.')
             return
         }
 
@@ -69,7 +69,7 @@ export const DisplayTime = ({ time, store, currentSelectedDate, activeSession }:
         }
     }
 
-    const isDisabled = !activeSession || !time.cartBookableTime
+    const isDisabled = !activeSession || !activeSession.service || !time.cartBookableTime
 
     return (
         <Button
