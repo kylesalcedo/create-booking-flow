@@ -1,5 +1,5 @@
 import { Box, Button, Grid } from '@mui/material'
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useMobile } from 'lib/utils/useMobile'
 import { useWithLayoutStyles } from 'components/atoms/layout/useWithLayoutStyles'
 import BounceLoader from 'react-spinners/BounceLoader'
@@ -63,9 +63,14 @@ export default function WithLayout({
     const [hideRightPanel, setHideRightPanel] = useState(
         isHideRightPanel ?? false
     )
-    const [rightPanelBtnClick, setRightPanelBtnClick] = useState({
-        onRightPanelBtnClick,
+    const [rightPanelBtnClickState, setRightPanelBtnClickState] = useState({
+        handler: onRightPanelBtnClick,
     })
+
+    useEffect(() => {
+        setRightPanelBtnClickState({ handler: onRightPanelBtnClick })
+    }, [onRightPanelBtnClick])
+
     const [errorMessageType] = useErrorMessageType()
     const providerValue: Context = {
         isShowLoader: showLoader,
@@ -80,8 +85,8 @@ export default function WithLayout({
         setIsBlurScreen: (isBlurScreen: boolean) => {
             setBlurScreen(isBlurScreen)
         },
-        setOnRightPanelBtnClick: (onRightPanelBtnClick: () => void) => {
-            setRightPanelBtnClick({ onRightPanelBtnClick })
+        setOnRightPanelBtnClick: (newHandler: () => void) => {
+            setRightPanelBtnClickState({ handler: newHandler })
         },
         setHideLeftPanel: (hideLeftPanel: boolean) => {
             setHideLeftPanel(hideLeftPanel)
@@ -165,7 +170,7 @@ export default function WithLayout({
                                         color="primary"
                                         className={classes.rightPanelBottomBtn}
                                         onClick={
-                                            rightPanelBtnClick.onRightPanelBtnClick
+                                            rightPanelBtnClickState.handler
                                         }
                                     >
                                         {rightPanelBtnCaption}
