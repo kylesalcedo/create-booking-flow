@@ -4,13 +4,14 @@ import { useCartMethods, useCartState } from 'lib/state/cart'
 import { Step } from 'lib/state/booking-flow/types'
 import { useFlowStep } from 'lib/state/booking-flow'
 import { useCartStoreState } from 'lib/state/store'
-import { useSetLastSelectedBookableItem } from 'lib/state/services'
+import { useSetLastSelectedBookableItem, useSelectedServices } from 'lib/state/services'
 import { useContext } from 'react'
 import { LayoutContext } from 'components/atoms/layout/LayoutContext'
 import { FlowType, useAppConfig } from 'lib/state/config'
 import { ServiceAvailableBookableItem } from 'components/atoms/layout/service/ServiceAvailableBookableItem'
 import { ServicePrice } from 'components/atoms/layout/service/ServicePrice'
 import { SelectableListItem } from 'components/atoms/layout/selectable-list-item/SelectableListItem'
+import { useMultiSessionManager } from 'lib/state/multiple-sessions'
 
 interface Props {
     bookableItem: CartAvailableBookableItem
@@ -31,19 +32,37 @@ export const Service = ({ bookableItem }: Props) => {
     const { getFlowType } = useAppConfig()
     const flowType = getFlowType()
     const setLastSelectedBookableItem = useSetLastSelectedBookableItem()
+    const { selectedServicesStateValue } = useSelectedServices()
+    const { addSession: addMultiSession } = useMultiSessionManager()
     const hasOptions = bookableItem.optionGroups?.length > 0
     const selectClickLocationBase = async () => {
         if (cart === undefined || cartStore?.location === undefined) {
             return false
         }
         layout.setIsShowLoader(true)
+
+        const beforeServiceIds = selectedServicesStateValue.map(s => s.id);
+
         const cartServices = await addService(cart, bookableItem)
+        
+        const newCartBookableItem = cartServices.services.find(s => !beforeServiceIds.includes(s.id)) 
+                                    || cartServices.services[cartServices.services.length - 1];
+
+        if (newCartBookableItem) {
+            addMultiSession({
+                service: newCartBookableItem,
+            });
+        } else {
+            console.error("Could not find the newly added service in the cart to add to multi-session list.");
+        }
+
         await loadSelectedServices(cart, cartServices.services)
         if (hasOptions) {
             await setStep(Step.SelectOptions)
         } else {
             await setStep(Step.SelectedServices)
         }
+        layout.setIsShowLoader(false);
         return true
     }
 
