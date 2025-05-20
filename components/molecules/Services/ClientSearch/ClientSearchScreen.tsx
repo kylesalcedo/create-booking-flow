@@ -14,8 +14,18 @@ export default function ClientSearchScreen() {
     const canContinue = !!selectedClient
 
     const handleContinue = async () => {
-        if (!canContinue) return
-        await setStep(Step.SelectService)
+        console.log('ClientSearchScreen - handleContinue called. canContinue:', canContinue, 'selectedClient:', selectedClient);
+        if (!canContinue) {
+            console.log('ClientSearchScreen - handleContinue: cannot continue.');
+            return;
+        }
+        try {
+            console.log('ClientSearchScreen - handleContinue: attempting to set step to SelectService.');
+            await setStep(Step.SelectService);
+            console.log('ClientSearchScreen - handleContinue: setStep completed.');
+        } catch (error) {
+            console.error('ClientSearchScreen - handleContinue: error during setStep:', error);
+        }
     }
 
     return (
