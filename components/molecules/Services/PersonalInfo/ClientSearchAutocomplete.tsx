@@ -25,6 +25,7 @@ export const ClientSearchAutocomplete = () => {
         setFieldValue(lastNameFieldName, rest.join(' '))
         if (value.email) setFieldValue(emailFieldName, value.email)
         if (value.mobilePhone) setFieldValue(phoneFieldName, value.mobilePhone)
+        console.log('ClientSearchAutocomplete - selected value:', value)
         setSelectedClient(value)
     }
 

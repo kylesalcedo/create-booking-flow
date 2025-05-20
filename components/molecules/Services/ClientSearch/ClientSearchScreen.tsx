@@ -8,6 +8,7 @@ import { Formik } from 'formik'
 
 export default function ClientSearchScreen() {
     const selectedClient = useClientValue()
+    console.log('ClientSearchScreen - selectedClient from Recoil:', selectedClient);
     const { setStep } = useFlowStep()
 
     const canContinue = !!selectedClient
