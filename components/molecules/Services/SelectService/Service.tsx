@@ -49,9 +49,9 @@ export const Service = ({ bookableItem }: Props) => {
                                     || cartServices.services[cartServices.services.length - 1];
 
         if (newCartBookableItem) {
-            console.log("New CartBookableItem found:", JSON.parse(JSON.stringify(newCartBookableItem)));
-            console.log("newCartBookableItem.selectedStaffVariant:", JSON.parse(JSON.stringify(newCartBookableItem.selectedStaffVariant)));
-            console.log("newCartBookableItem.selectedStaffVariant.staff:", JSON.parse(JSON.stringify(newCartBookableItem.selectedStaffVariant?.staff)));
+            console.log("New CartBookableItem found:", newCartBookableItem);
+            console.log("newCartBookableItem.selectedStaffVariant:", newCartBookableItem.selectedStaffVariant);
+            console.log("newCartBookableItem.selectedStaffVariant.staff:", newCartBookableItem.selectedStaffVariant?.staff);
             addMultiSession({
                 service: newCartBookableItem,
                 staff: newCartBookableItem.selectedStaffVariant?.staff,
