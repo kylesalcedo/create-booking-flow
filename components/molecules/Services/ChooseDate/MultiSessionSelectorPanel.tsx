@@ -26,7 +26,15 @@ export const MultiSessionSelectorPanel = () => {
                         >
                             <ListItemText 
                                 primary={`Session ${index + 1}: ${session.service.item.name}`}
-                                secondary={session.selectedTime ? `Time: ${new Date(session.locationDisplayTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Time not set'}
+                                secondary={
+                                    session.selectedTime && session.locationDisplayTime && session.date
+                                      ? `Time: ${new Date(session.locationDisplayTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on ${new Date(session.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}`
+                                      : session.selectedTime && session.locationDisplayTime
+                                      ? `Time: ${new Date(session.locationDisplayTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (Date not set)`
+                                      : session.selectedTime
+                                      ? 'Time selected (Details pending)'
+                                      : 'Time not set'
+                                  }
                             />
                         </ListItemButton>
                     </ListItem>
