@@ -15,7 +15,7 @@ export const useMultiSessionManager = () => {
         const newSession: MultiSessionItem = {
             ...sessionData,
             id,
-            status: 'pending',
+            status: 'not_selected',
             confirmationDetails: null,
         };
         setSessions((prevSessions) => [...prevSessions, newSession]);

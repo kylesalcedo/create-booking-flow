@@ -10,8 +10,7 @@ import { DayTimes } from 'components/molecules/Services/ChooseDate/OneDay/DayTim
 import { Store } from 'lib/state/store/types'
 import { BounceLoader } from 'react-spinners'
 import { useMobile } from 'lib/utils/useMobile'
-import { useSelectedServices } from 'lib/state/services'
-import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
+import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
 interface StylesProps {
     isMobile: boolean
@@ -36,15 +35,15 @@ const useStyles = makeStyles(() => ({
 interface Props {
     filteredDate?: Date
     store: Store | undefined
+    activeSession: MultiSessionItem | undefined
 }
 
-export const SelectTime = ({ filteredDate, store }: Props) => {
+export const SelectTime = ({ filteredDate, store, activeSession }: Props) => {
     const { isMobile } = useMobile()
     const classes = useStyles({ isMobile })
     const staffTimesArray = useStaffTimesState()
-    const { selectedServicesStateValue } = useSelectedServices()
 
-    const currentService: CartBookableItem | undefined = selectedServicesStateValue?.[0]
+    const currentService = activeSession?.service
 
     const selectedDayTimes = staffTimesArray
         .concat()
@@ -74,28 +73,28 @@ export const SelectTime = ({ filteredDate, store }: Props) => {
                 </Box>
             )}
 
-            {!loadingStaffTimeState && currentService && filteredDate && (
+            {!loadingStaffTimeState && currentService && filteredDate && activeSession && (
                 <>
                     <DayTimes
                         dayTimeName="Morning"
                         staffTimes={morningTimes}
                         store={store}
                         currentSelectedDate={filteredDate}
-                        currentService={currentService}
+                        activeSession={activeSession}
                     />
                     <DayTimes
                         dayTimeName="Afternoon"
                         staffTimes={afternoonTimes}
                         store={store}
                         currentSelectedDate={filteredDate}
-                        currentService={currentService}
+                        activeSession={activeSession}
                     />
                     <DayTimes
                         dayTimeName="Evening"
                         staffTimes={eveningTimes}
                         store={store}
                         currentSelectedDate={filteredDate}
-                        currentService={currentService}
+                        activeSession={activeSession}
                     />
                 </>
             )}

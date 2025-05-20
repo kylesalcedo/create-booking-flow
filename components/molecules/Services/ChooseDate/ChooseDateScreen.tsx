@@ -80,7 +80,7 @@ export default function ChooseDateScreen() {
             rightPanel={
                 <>
                     {activeSessionExists && dateTimeType === DateTimeType.ShowTimeForOneDay && (
-                        <ShowTimeForOneDayComponent activeSessionId={activeSessionId} />
+                        <ShowTimeForOneDayComponent activeSessionId={activeSessionId} sessions={sessions || []} />
                     )}
                     {activeSessionExists && dateTimeType === DateTimeType.ShowTimeForManyDays && (
                         <ShowTimeForManyDaysComponent activeSessionId={activeSessionId} />

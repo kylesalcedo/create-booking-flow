@@ -3,14 +3,14 @@ import { makeStyles } from '@mui/styles'
 import { Box, Typography } from '@mui/material'
 import { Store } from 'lib/state/store/types'
 import { DisplayTime } from 'components/molecules/Services/ChooseDate/DisplayTime'
-import { CartBookableItem } from '@boulevard/blvd-book-sdk/lib/cart'
+import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
 interface Props {
     staffTimes: StaffTime[]
     dayTimeName: string
     store: Store | undefined
     currentSelectedDate: Date
-    currentService: CartBookableItem
+    activeSession: MultiSessionItem
 }
 
 const useStyles = makeStyles(() => ({
@@ -37,7 +37,7 @@ const useStyles = makeStyles(() => ({
     },
 }))
 
-export const DayTimes = ({ staffTimes, dayTimeName, store, currentSelectedDate, currentService }: Props) => {
+export const DayTimes = ({ staffTimes, dayTimeName, store, currentSelectedDate, activeSession }: Props) => {
     const classes = useStyles()
 
     return (
@@ -59,7 +59,7 @@ export const DayTimes = ({ staffTimes, dayTimeName, store, currentSelectedDate, 
                             time={time}
                             store={store}
                             currentSelectedDate={currentSelectedDate}
-                            currentService={currentService}
+                            activeSession={activeSession}
                         />
                     ))}
                 {staffTimes.length === 0 && (

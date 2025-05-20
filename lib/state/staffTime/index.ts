@@ -15,6 +15,7 @@ import { isAfter } from 'date-fns'
 import { Location } from '@boulevard/blvd-book-sdk/lib/locations'
 import { sortByDate } from 'lib/utils/sortUtils'
 import { DateTimeType, useAppConfig } from 'lib/state/config'
+import { MultiSessionItem } from 'lib/state/multiple-sessions/types'
 
 export const staffTimesState = atom<StaffTimes[]>({
     key: 'staffTimesState',
@@ -154,7 +155,8 @@ export const useStaffTimes = () => {
     const loadStaffTimes = async (
         cart: Cart | undefined,
         staffDate: StaffDate | undefined,
-        locationTz: string
+        locationTz: string,
+        activeSession?: MultiSessionItem | undefined
     ): Promise<CartBookableTime[] | undefined> => {
         if (!cart || !staffDate || !staffDate.cartBookableDate) {
             return
