@@ -35,11 +35,14 @@ export default async function handler(
         return res.status(405).end()
     }
 
-    const { q: queryText } = req.body
+    const { q: queryTextUntrusted } = req.body
 
-    if (!queryText || typeof queryText !== 'string') {
+    if (!queryTextUntrusted || typeof queryTextUntrusted !== 'string') {
         return res.status(400).json({ error: 'Missing or invalid query parameter q in request body' })
     }
+
+    // Basic sanitization: escape single quotes for GQL string
+    const queryText = queryTextUntrusted.replace(/'/g, "\\\\'");
 
     if (!BUSINESS_ID || !API_KEY || !API_SECRET) {
         return res
@@ -49,9 +52,11 @@ export default async function handler(
 
     const authHeader = `Basic ${generate_auth_header(BUSINESS_ID, API_SECRET, API_KEY)}`
 
+    const gqlFilter = `name~='${queryText}' OR email~='${queryText}' OR mobilePhone~='${queryText}'`;
+
     const graphQuery = `
         query Clients($first: Int!) {
-            clients(query: "${queryText}", first: $first) {
+            clients(query: "${gqlFilter}", first: $first) {
                 edges {
                     node {
                         id
