@@ -50,17 +50,18 @@ export default async function handler(
     const authHeader = `Basic ${generate_auth_header(BUSINESS_ID, API_SECRET, API_KEY)}`
 
     const graphQuery = `
-        query SearchClients($businessId: ID!, $queryString: QueryString!, $first: Int!) {
-            business(id: $businessId) {
-                clients(query: $queryString, first: $first) {
-                    edges {
-                        node {
-                            id
-                            name
-                            email
-                            mobilePhone
-                            active
-                        }
+        query Clients($queryString: QueryString!, $first: Int!) {
+            clients(query: $queryString, first: $first) {
+                edges {
+                    node {
+                        id
+                        name
+                        email
+                        mobilePhone
+                        active
+                        externalId
+                        createdAt
+                        updatedAt
                     }
                 }
             }
@@ -81,7 +82,6 @@ export default async function handler(
             body: JSON.stringify({
                 query: graphQuery,
                 variables: {
-                    businessId: BUSINESS_ID,
                     queryString: queryText,
                     first: 10,
                 },
@@ -111,7 +111,7 @@ export default async function handler(
             return res.status(400).json({ error: 'GraphQL query errors', details: data.errors });
         }
         
-        const clients = data?.data?.business?.clients?.edges?.map((e: any) => e.node) || []
+        const clients = data?.data?.clients?.edges?.map((e: any) => e.node) || []
 
         return res.status(200).json({ clients })
     } catch (error) {
