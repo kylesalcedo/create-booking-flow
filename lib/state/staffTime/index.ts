@@ -161,12 +161,23 @@ export const useStaffTimes = () => {
         if (!cart || !staffDate || !staffDate.cartBookableDate) {
             return
         }
+        
+        const options: { timezone: string; bookableItemId?: string; staffId?: string } = {
+            timezone: locationTz,
+        };
+
+        if (activeSession) {
+            options.bookableItemId = activeSession.service.id;
+            if (activeSession.staff?.id) { // Assuming staff object has an id property
+                options.staffId = activeSession.staff.id;
+            }
+        }
+
         try {
+            // Pass the options to getBookableTimes
             const times = await cart.getBookableTimes(
                 staffDate.cartBookableDate,
-                {
-                    timezone: locationTz,
-                }
+                options
             )
             if (times === undefined) {
                 return

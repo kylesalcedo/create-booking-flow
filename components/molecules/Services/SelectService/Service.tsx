@@ -51,6 +51,7 @@ export const Service = ({ bookableItem }: Props) => {
         if (newCartBookableItem) {
             addMultiSession({
                 service: newCartBookableItem,
+                staff: newCartBookableItem.selectedStaffVariant?.staff,
             });
         } else {
             console.error("Could not find the newly added service in the cart to add to multi-session list.");
