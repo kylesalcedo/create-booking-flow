@@ -52,11 +52,9 @@ export default async function handler(
 
     const authHeader = `Basic ${generate_auth_header(BUSINESS_ID, API_SECRET, API_KEY)}`
 
-    const gqlFilter = `name~='${queryText}' OR email~='${queryText}' OR mobilePhone~='${queryText}'`;
-
     const graphQuery = `
         query Clients($first: Int!) {
-            clients(query: "${gqlFilter}", first: $first) {
+            clients(query: "${queryText}", first: $first) {
                 edges {
                     node {
                         id
