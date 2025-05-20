@@ -50,8 +50,8 @@ export default async function handler(
     const authHeader = `Basic ${generate_auth_header(BUSINESS_ID, API_SECRET, API_KEY)}`
 
     const graphQuery = `
-        query Clients($queryString: QueryString!, $first: Int!) {
-            clients(query: $queryString, first: $first) {
+        query Clients($first: Int!) {
+            clients(query: "${queryText}", first: $first) {
                 edges {
                     node {
                         id
@@ -82,7 +82,6 @@ export default async function handler(
             body: JSON.stringify({
                 query: graphQuery,
                 variables: {
-                    queryString: queryText,
                     first: 10,
                 },
             }),
