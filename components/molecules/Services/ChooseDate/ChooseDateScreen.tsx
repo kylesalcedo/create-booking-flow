@@ -25,56 +25,90 @@ export default function ChooseDateScreen() {
     const [activeSessionId, setActiveSessionId] = useActiveMultiSessionId();
 
     useEffect(() => {
-        // If there's no active session ID, and there are sessions,
-        // set the first session without a selected time as active.
-        // If all have times, set the first session as active.
-        if (!activeSessionId && sessions && sessions.length > 0) {
-            const firstSessionToSchedule = sessions.find(session => !session.selectedTime);
-            if (firstSessionToSchedule) {
-                setActiveSessionId(firstSessionToSchedule.id);
-            } else {
-                setActiveSessionId(sessions[0].id);
+        if (sessions && sessions.length > 0) {
+            const currentActiveSession = sessions.find(s => s.id === activeSessionId);
+
+            // Case 1: No active session ID, or current active session is invalid/doesn't exist in the list
+            if (!activeSessionId || !currentActiveSession) {
+                const firstSessionToSchedule = sessions.find(session => !session.selectedTime);
+                if (firstSessionToSchedule) {
+                    setActiveSessionId(firstSessionToSchedule.id);
+                } else { // All sessions have times, or no sessions need scheduling
+                    setActiveSessionId(sessions[0].id); // Default to the first session
+                }
+            }
+            // Case 2: Active session ID is set, but it already has a time, and others don't
+            // This part is removed to allow users to click on already scheduled sessions
+            // if (currentActiveSession && currentActiveSession.selectedTime) {
+            //     const nextSessionToSchedule = sessions.find(session => !session.selectedTime);
+            //     if (nextSessionToSchedule && nextSessionToSchedule.id !== activeSessionId) {
+            //         // setActiveSessionId(nextSessionToSchedule.id);
+            //     }
+            // }
+        } else {
+            // No sessions, so no active session Id
+            if (activeSessionId !== null) {
+                setActiveSessionId(null);
             }
         }
     }, [sessions, activeSessionId, setActiveSessionId]);
 
-    const allSessionsScheduled = sessions.every(s => !!s.selectedTime);
+    const allSessionsTrulyScheduled = sessions && sessions.length > 0 && sessions.every(s => !!s.selectedTime);
+    const activeSessionExists = !!(activeSessionId && sessions && sessions.find(s => s.id === activeSessionId));
 
     const rightPanelBtnCaption = () => {
-        if (allSessionsScheduled) return "Continue to Next Step";
-        if (selectedStaffTime?.locationTime) {
-            return `Continue with ${formatDateFns(
+        if (allSessionsTrulyScheduled) return "Continue to Next Step";
+
+        // Caption for the button when an active session is selected and a time slot is picked for IT
+        const currentSession = sessions?.find(s => s.id === activeSessionId);
+        if (currentSession && !currentSession.selectedTime && selectedStaffTime?.locationTime) {
+            return `Confirm ${formatDateFns(
                 selectedStaffTime.locationTime,
                 selectedStore?.location.tz,
                 'h:mmaaa'
-            )}`;
+            )} for ${currentSession.service.item.name}`;
         }
-        return 'Select a Time';
+        return 'Select a Time'; // Default when no specific time slot is picked for the active session yet
     };
+    
+    const showContinueButton = activeSessionExists || allSessionsTrulyScheduled;
 
     return (
         <WithLayout
             isShowLoader={false}
-            leftPanel={<CurrentSessionDisplayPanel sessions={sessions} activeSessionId={activeSessionId} />}
+            leftPanel={<CurrentSessionDisplayPanel sessions={sessions || []} activeSessionId={activeSessionId} />}
             rightPanel={
                 <>
-                    {activeSessionId && dateTimeType === DateTimeType.ShowTimeForOneDay && (
+                    {activeSessionExists && dateTimeType === DateTimeType.ShowTimeForOneDay && (
                         <ShowTimeForOneDayComponent activeSessionId={activeSessionId} />
                     )}
-                    {activeSessionId && dateTimeType === DateTimeType.ShowTimeForManyDays && (
+                    {activeSessionExists && dateTimeType === DateTimeType.ShowTimeForManyDays && (
                         <ShowTimeForManyDaysComponent activeSessionId={activeSessionId} />
                     )}
-                    {!activeSessionId && sessions.length > 0 && !allSessionsScheduled && (
-                        <Typography sx={{p:2, textAlign: 'center'}}>Please wait, selecting next session...</Typography>
+                    {!activeSessionExists && sessions && sessions.length > 0 && !allSessionsTrulyScheduled && (
+                        <Typography sx={{p:2, textAlign: 'center'}}>
+                            Please select an appointment from the left to schedule its time.
+                        </Typography>
                     )}
-                    {!activeSessionId && allSessionsScheduled && (
-                        <Typography sx={{p:2, textAlign: 'center'}}>All appointments have times selected. Click Continue.</Typography>
+                    {allSessionsTrulyScheduled && (
+                         <Typography sx={{p:2, textAlign: 'center'}}>
+                            All appointments have times selected. Click "Continue to Next Step".
+                         </Typography>
+                    )}
+                     {(!sessions || sessions.length === 0) && (
+                        <Typography sx={{p:2, textAlign: 'center'}}>
+                            There are no sessions to schedule. Please go back and select services.
+                        </Typography>
                     )}
                 </>
             }
-            rightPanelCaption={activeSessionId ? "Select an availability" : (allSessionsScheduled ? "Ready to Continue" : "Loading sessions...")}
+            rightPanelCaption={
+                activeSessionExists ? "Select an availability" 
+                : allSessionsTrulyScheduled ? "Ready to Continue" 
+                : (sessions && sessions.length > 0 ? "Select a Session" : "No Sessions")
+            }
             rightPanelBtnCaption={rightPanelBtnCaption()}
-            showBottom={!!activeSessionId || allSessionsScheduled}
+            showBottom={showContinueButton}
             addBackArrow={isMobile}
             backArrowStep={Step.SelectedServices}
             workshopPanel={<WorkshopPanel />}
