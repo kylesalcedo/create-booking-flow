@@ -1,8 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
+const crypto = require('crypto')
 
 const ADMIN_ENDPOINT =
     process.env.BLVD_ADMIN_ENDPOINT ||
     'https://sandbox.joinblvd.com/api/2020-01/admin/graphql'
+
+//API Info
+const BUSINESS_ID = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID;
+const API_SECRET = process.env.BLVD_API_SECRET;
+const API_KEY = process.env.BLVD_ADMIN_API_KEY;
+
+function generate_auth_header(business_id, api_secret, api_key) {
+  const prefix = 'blvd-admin-v1'
+  const timestamp = Math.floor(Date.now() / 1000)
+
+  const payload = `${prefix}${business_id}${timestamp}`
+  const raw_key = Buffer.from(api_secret, 'base64')
+  const signature = crypto
+    .createHmac('sha256', raw_key)
+    .update(payload, 'utf8')
+    .digest('base64')
+  const token = `${signature}${payload}`
+  const http_basic_payload = `${api_key}:${token}`
+  const http_basic_credentials = Buffer.from(http_basic_payload, 'utf8').toString('base64')
+
+  return http_basic_credentials
+}
 
 export default async function handler(
     req: NextApiRequest,
@@ -18,24 +41,13 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing or invalid query parameter q in request body' })
     }
 
-    const businessId = process.env.NEXT_PUBLIC_BLVD_BUSINESS_ID
-    // Admin credentials from environment variables
-    const adminKey = process.env.BLVD_ADMIN_API_KEY || process.env.NEXT_PUBLIC_BLVD_API_KEY
-    const adminSecret = process.env.BLVD_ADMIN_API_SECRET || process.env.BLVD_API_SECRET || process.env.NEXT_PUBLIC_BLVD_API_SECRET
-
-    if (!businessId || !adminKey) {
+    if (!BUSINESS_ID || !API_KEY || !API_SECRET) {
         return res
             .status(500)
-            .json({ error: 'Missing Boulevard Admin credentials on server (Business ID or Admin API Key)' })
+            .json({ error: 'Missing Boulevard Admin credentials on server (Business ID, Admin API Key, or Admin API Secret)' })
     }
 
-    let authHeader: string
-    if (adminSecret) {
-        const token = Buffer.from(`${adminKey}:${adminSecret}`).toString('base64')
-        authHeader = `Basic ${token}`
-    } else {
-        authHeader = `Bearer ${adminKey}`
-    }
+    const authHeader = `Basic ${generate_auth_header(BUSINESS_ID, API_SECRET, API_KEY)}`
 
     const graphQuery = `
         query SearchClients($businessId: ID!, $queryString: QueryString!, $first: Int!) {
@@ -56,7 +68,7 @@ export default async function handler(
 
     try {
         console.log(`Fetching from Admin GraphQL endpoint: ${ADMIN_ENDPOINT}`);
-        console.log(`Using businessId: ${businessId}, query: ${queryText}`);
+        console.log(`Using businessId: ${BUSINESS_ID}, query: ${queryText}`);
         console.log(`Admin API Authorization header used: ${authHeader.substring(0, 15)}...`);
 
         const apiRes = await fetch(ADMIN_ENDPOINT, {
@@ -69,7 +81,7 @@ export default async function handler(
             body: JSON.stringify({
                 query: graphQuery,
                 variables: {
-                    businessId: businessId,
+                    businessId: BUSINESS_ID,
                     queryString: queryText,
                     first: 10,
                 },
