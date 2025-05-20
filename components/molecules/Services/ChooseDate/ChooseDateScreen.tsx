@@ -92,7 +92,7 @@ export default function ChooseDateScreen() {
                     )}
                     {allSessionsTrulyScheduled && (
                          <Typography sx={{p:2, textAlign: 'center'}}>
-                            All appointments have times selected. Click "Continue to Next Step".
+                            All appointments have times selected. Click &quot;Continue to Next Step&quot;.
                          </Typography>
                     )}
                      {(!sessions || sessions.length === 0) && (
