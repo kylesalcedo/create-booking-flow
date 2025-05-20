@@ -18,6 +18,7 @@ import { sortByDate } from 'lib/utils/sortUtils'
 import formatDateFns from 'lib/utils/formatDateFns'
 import { useMobile } from 'lib/utils/useMobile'
 import { useTransition, animated, config } from 'react-spring'
+import { MultiSessionReview } from '../MultiSessionReview'
 
 const SelectDateButton = styled(Button)(() => ({
     width: 145,
@@ -160,8 +161,8 @@ export const SelectAvailability = () => {
             ...config.stiff,
             duration: filteredDate ? 0 : 1000,
         }),
-        keys: (staffTimes) =>
-            `selectTimeTransition-${staffTimes.day}-${staffTimes.month}-${staffTimes.year}`,
+        keys: (staffTimesItem) =>
+            `selectTimeTransition-${staffTimesItem.day}-${staffTimesItem.month}-${staffTimesItem.year}`,
     })
 
     return (
@@ -218,7 +219,7 @@ export const SelectAvailability = () => {
                 </Popover>
             </Box>
             <Box className={classes.selectTimesBlock}>
-                {transition(({ maxHeight, ...restStyle }, staffTimes) => (
+                {transition(({ maxHeight, ...restStyle }, staffTimesItem) => (
                     <animated.div
                         style={{
                             ...restStyle,
@@ -234,14 +235,14 @@ export const SelectAvailability = () => {
                                 x > maxHeightValue - 10 ? '' : `hidden`
                             ),
                         }}
-                        key={`selectTimeAnimated-${staffTimes.day}-${staffTimes.month}-${staffTimes.year}`}
+                        key={`selectTimeAnimated-${staffTimesItem.day}-${staffTimesItem.month}-${staffTimesItem.year}`}
                     >
                         <SelectTime
+                            staffTimes={staffTimesItem}
                             store={selectedStore}
-                            staffTimes={staffTimes}
                             onClearDateClick={onClearDateClick}
                             filteredDate={filteredDate}
-                            key={`selectTime-${staffTimes.day}-${staffTimes.month}-${staffTimes.year}`}
+                            key={`selectTime-${staffTimesItem.day}-${staffTimesItem.month}-${staffTimesItem.year}`}
                         />
                     </animated.div>
                 ))}
@@ -261,6 +262,7 @@ export const SelectAvailability = () => {
                     </Box>
                 )}
             </Box>
+            <MultiSessionReview />
         </>
     )
 }

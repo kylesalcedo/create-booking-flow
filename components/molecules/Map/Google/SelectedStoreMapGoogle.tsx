@@ -43,17 +43,17 @@ export const SelectedStoreMapGoogle = () => {
             zoom={defaultZoom}
             onLoad={onLoad}
             onUnmount={onUnmount}
-            options={{
-                fullscreenControl: false,
-                gestureHandling: 'greedy',
-                clickableIcons: false,
-                zoomControl: false,
-            }}
-        >
+                    options={{
+                        fullscreenControl: false,
+                        gestureHandling: 'greedy',
+                        clickableIcons: false,
+                        zoomControl: false,
+                    }}
+                >
             <Marker position={{ lat: selectedStore.lat, lng: selectedStore.lng }}>
-                <MapStore
-                    key={'MapStore' + selectedStore.location.id}
-                />
+                    <MapStore
+                        key={'MapStore' + selectedStore.location.id}
+                    />
             </Marker>
         </GoogleMap>
     )

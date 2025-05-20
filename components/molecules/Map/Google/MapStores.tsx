@@ -44,19 +44,19 @@ export const MapStores = ({ stores }: Props) => {
             zoom={globalViewport.zoom}
             onLoad={onLoad}
             onUnmount={onUnmount}
-            options={{
-                fullscreenControl: false,
-                gestureHandling: 'greedy',
-                clickableIcons: false,
-            }}
-        >
-            {stores?.map((store) => (
+                options={{
+                    fullscreenControl: false,
+                    gestureHandling: 'greedy',
+                    clickableIcons: false,
+                }}
+            >
+                {stores?.map((store) => (
                 <Marker key={'MapStore' + store.location.id} position={{ lat: store.lat, lng: store.lng }}>
                     <MapStore
                         store={store}
                     />
                 </Marker>
-            ))}
+                ))}
         </GoogleMap>
     )
 }
