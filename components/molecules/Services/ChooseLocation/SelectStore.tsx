@@ -35,7 +35,7 @@ interface Props {
 export const SelectStore = ({ store }: Props) => {
     const { isMobile } = useMobile()
     const [isShowMap] = useIsShowMap()
-    const { createCart, setCartLocation, loadSelectedServices } =
+    const { createCart, setCartLocation, loadStaffForService } =
         useCartMethods()
     const { setStep } = useFlowStep()
     const setMapViewportState = useSetMapViewportState()
@@ -70,7 +70,15 @@ export const SelectStore = ({ store }: Props) => {
             lastSelectedBookableItem,
             selectedServicesStateValue
         )
-        await loadSelectedServices(cart, selectedServices)
+        // After setCartLocation, selectedServices (CartBookableItem[]) is returned.
+        // The active service should be set, and then loadStaffForService called for it.
+        // Assuming the first service in the list should become active.
+        if (selectedServices && selectedServices.length > 0) {
+            // setActiveSelectedService(selectedServices[0]); // This would be ideal if available here
+            // Directly call loadStaffForService with the first service.
+            // This assumes loadStaffForService also handles setting it as active internally.
+            await loadStaffForService(selectedServices[0])
+        }
         resetLastSelectedBookableItem()
         await setStep(Step.SelectedServices)
     }
