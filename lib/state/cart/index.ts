@@ -349,21 +349,32 @@ export const useCartMethods = () => {
         cartBookableTime: CartBookableTime | undefined,
         cartStoreState: Store | undefined
     ): Promise<Cart | undefined> => {
-        if (!cart || !cartBookableTime || !cartStoreState) {
-            return undefined;
+        if (!cartBookableTime || !cart) {
+            return undefined
         }
         try {
-            const updatedCart = await cart.reserveTime(cartBookableTime);
-            setCart(updatedCart); 
-            appointmentTimeSelected(
-                updatedCart,
-                cartStoreState,
-                cartTimeToDate(cartBookableTime.startTime)
-            );
-            return updatedCart;
+            cart = await cart.reserveBookableItems(cartBookableTime)
+            appointmentTimeSelected({
+                store: cartStoreState as Store,
+                cart,
+            })
+            setCart(cart)
+            if (cartStoreState) {
+                setCartCommonState(
+                    cart,
+                    cartStoreState.location,
+                    cartStoreState
+                )
+            }
+            loadSelectedServices(
+                cart,
+                cart.selectedBookableItems,
+                selectedCartAvailableCategory
+            )
+            return cart
         } catch (error) {
-            console.error('Error reserving bookable time:', error);
-            return undefined;
+            console.error('Error reserving bookable time:', error)
+            return undefined
         }
     }
 

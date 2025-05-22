@@ -12,6 +12,7 @@ import { ServiceAvailableBookableItem } from 'components/atoms/layout/service/Se
 import { ServicePrice } from 'components/atoms/layout/service/ServicePrice'
 import { SelectableListItem } from 'components/atoms/layout/selectable-list-item/SelectableListItem'
 import { useMultiSessionManager } from 'lib/state/multiple-sessions'
+import { cartAvailableBookableItemStaffVariantToStaff } from 'lib/state/staff'
 
 interface Props {
     bookableItem: CartAvailableBookableItem
@@ -51,10 +52,15 @@ export const Service = ({ bookableItem }: Props) => {
         if (newCartBookableItem) {
             console.log("New CartBookableItem found:", newCartBookableItem);
             console.log("newCartBookableItem.selectedStaffVariant:", newCartBookableItem.selectedStaffVariant);
-            console.log("newCartBookableItem.selectedStaffVariant.staff:", newCartBookableItem.selectedStaffVariant?.staff);
+            
+            const staffForSession = newCartBookableItem.selectedStaffVariant
+                ? cartAvailableBookableItemStaffVariantToStaff(newCartBookableItem.selectedStaffVariant)
+                : undefined;
+            console.log("Converted staff for session:", staffForSession);
+
             addMultiSession({
                 service: newCartBookableItem,
-                staff: newCartBookableItem.selectedStaffVariant?.staff,
+                staff: staffForSession,
             });
         } else {
             console.error("Could not find the newly added service in the cart to add to multi-session list.");

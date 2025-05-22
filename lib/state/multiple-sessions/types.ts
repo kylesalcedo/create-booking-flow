@@ -1,9 +1,10 @@
 import { CartBookableItem, CartBookableTime } from '@boulevard/blvd-book-sdk/lib/cart';
+import { Staff } from 'lib/state/staff/types';
 
 export interface MultiSessionItem {
     id: string; // A unique ID for this pending session (e.g., nanoid())
     service: CartBookableItem; // Or just the necessary details like serviceId, name
-    staff?: any; // Staff details if selected, align with your Staff type. Consider defining a specific Staff type if available.
+    staff?: Staff; // Changed type from any to Staff
     date?: Date; // Made optional
     selectedTime?: CartBookableTime; // Made optional - The SDK object for reservation
     locationDisplayTime?: Date; // Made optional - The Date object for display, in location's timezone
