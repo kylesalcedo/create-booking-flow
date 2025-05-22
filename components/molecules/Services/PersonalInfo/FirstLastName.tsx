@@ -6,8 +6,12 @@ import {
     lastNameFieldName,
 } from '../PersonalInfo/ts/constants'
 
-export default function FirstLastName() {
-    const { errors, touched } = useFormikContext()
+interface FirstLastNameProps {
+    readOnly?: boolean
+}
+
+export default function FirstLastName({ readOnly }: FirstLastNameProps) {
+    const { errors, touched } = useFormikContext<any>()
 
     return (
         <Grid item md={6} sm={12} xs={12}>
@@ -15,24 +19,20 @@ export default function FirstLastName() {
                 id={firstNameFieldName}
                 label="First Name"
                 fullWidth
-                error={
-                    errors[firstNameFieldName] && touched[firstNameFieldName]
-                }
-                helperText={
-                    errors[firstNameFieldName] &&
-                    touched[firstNameFieldName] &&
-                    errors[firstNameFieldName]
-                }
+                error={!!(errors[firstNameFieldName] && touched[firstNameFieldName])}
+                helperText={touched[firstNameFieldName] && errors[firstNameFieldName] ? String(errors[firstNameFieldName]) : ''}
+                InputProps={{
+                    readOnly: readOnly,
+                }}
             />
             <TextFieldBase
                 id={lastNameFieldName}
                 label="Last Name"
-                error={errors[lastNameFieldName] && touched[lastNameFieldName]}
-                helperText={
-                    errors[lastNameFieldName] &&
-                    touched[lastNameFieldName] &&
-                    errors[lastNameFieldName]
-                }
+                error={!!(errors[lastNameFieldName] && touched[lastNameFieldName])}
+                helperText={touched[lastNameFieldName] && errors[lastNameFieldName] ? String(errors[lastNameFieldName]) : ''}
+                InputProps={{
+                    readOnly: readOnly,
+                }}
             />
         </Grid>
     )

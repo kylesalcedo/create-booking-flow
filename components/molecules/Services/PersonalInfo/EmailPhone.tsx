@@ -7,14 +7,18 @@ import { emailFieldName, phoneFieldName } from '../PersonalInfo/ts/constants'
 import { forwardRef } from 'react'
 
 // eslint-disable-next-line react/display-name
-const TextMaskCustom = forwardRef((props, ref) => {
+const TextMaskCustom = forwardRef((props: any, ref: any) => {
     return (
         <MaskedInput {...props} placeholder="(000) 000-0000" mask={phoneMask} />
     )
 })
 
-export default function EmailPhone() {
-    const { errors, touched } = useFormikContext()
+interface EmailPhoneProps {
+    readOnly?: boolean
+}
+
+export default function EmailPhone({ readOnly }: EmailPhoneProps) {
+    const { errors, touched } = useFormikContext<any>()
 
     return (
         <>
@@ -23,12 +27,11 @@ export default function EmailPhone() {
                     id={emailFieldName}
                     label="Email"
                     type="email"
-                    error={errors[emailFieldName] && touched[emailFieldName]}
-                    helperText={
-                        errors[emailFieldName] &&
-                        touched[emailFieldName] &&
-                        errors[emailFieldName]
-                    }
+                    error={!!(errors[emailFieldName] && touched[emailFieldName])}
+                    helperText={touched[emailFieldName] && errors[emailFieldName] ? String(errors[emailFieldName]) : ''}
+                    InputProps={{
+                        readOnly: readOnly,
+                    }}
                 />
             </Grid>
             <Grid item md={4} sm={12} xs={12}>
@@ -37,14 +40,11 @@ export default function EmailPhone() {
                     label="Phone"
                     type="tel"
                     InputProps={{
-                        inputComponent: TextMaskCustom,
+                        inputComponent: TextMaskCustom as any,
+                        readOnly: readOnly,
                     }}
-                    error={errors[phoneFieldName] && touched[phoneFieldName]}
-                    helperText={
-                        errors[phoneFieldName] &&
-                        touched[phoneFieldName] &&
-                        errors[phoneFieldName]
-                    }
+                    error={!!(errors[phoneFieldName] && touched[phoneFieldName])}
+                    helperText={touched[phoneFieldName] && errors[phoneFieldName] ? String(errors[phoneFieldName]) : ''}
                 />
             </Grid>
         </>

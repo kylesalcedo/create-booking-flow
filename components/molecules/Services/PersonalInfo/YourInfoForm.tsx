@@ -8,12 +8,14 @@ import ContactInfo from 'components/molecules/Services/PersonalInfo/ContactInfo'
 import AdditionalInfo from 'components/molecules/Services/PersonalInfo/AdditionalInfo'
 import { useMobile } from 'lib/utils/useMobile'
 import { theme } from 'styles/theme'
+import { useClientValue } from 'lib/state/client'
 
 export default function YourInfoForm() {
     const { isMobile } = useMobile()
     const cartState = useCartState()
     const { handleSubmit } = useFormikContext()
     const layout = useContext(LayoutContext)
+    const selectedClient = useClientValue()
 
     useEffect(() => {
         layout.setOnRightPanelBtnClick(() => {
@@ -33,7 +35,7 @@ export default function YourInfoForm() {
             },
         }}>
             <BasicInfo />
-            <ContactInfo />
+            <ContactInfo readOnly={!!selectedClient} />
             {!!cartState?.bookingQuestions.length && <AdditionalInfo />}
         </Box>
     )
