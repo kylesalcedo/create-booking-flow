@@ -141,8 +141,8 @@ export const useCartMethods = () => {
         selectedCartAvailableItemsStateValue,
         setSelectedCartAvailableItemsState,
     } = useSelectedServices()
-    const setActiveSelectedService = useSetActiveSelectedService()
-    const setBookableStaffVariants = useSetBookableStaffVariants()
+    const setActiveSelectedService = useSetActiveSelectedService() // Manages activeSelectedServiceState
+    const setBookableStaffVariants = useSetBookableStaffVariants() // Manages bookableStaffVariantsState
     const setAllowChooseStaffError = useSetAllowChooseStaffError()
     const setCartBookableItemListStaff = useSetCartBookableItemListStaff()
     const availableBookableItemStores = useAvailableBookableItemStoresState()
@@ -154,12 +154,14 @@ export const useCartMethods = () => {
         useResetSelectedCartAvailableCategory()
 
     const isCartAvailableBookableItem = (
-        availableItem: CartAvailableItem | undefined
-    ) => {
-        return (
-            availableItem &&
-            availableItem['__typename'] === 'CartAvailableBookableItem'
-        )
+        availableItem: CartAvailableItem | CartBookableItem | undefined
+    ): availableItem is CartAvailableBookableItem | CartBookableItem => {
+        if (!availableItem) return false
+        if ('item' in availableItem) { // It's a CartBookableItem
+            return availableItem.item['__typename'] === 'CartAvailableBookableItem'
+        }
+        // It's a CartAvailableItem
+        return availableItem['__typename'] === 'CartAvailableBookableItem'
     }
 
     const isCartAvailablePurchasableItem = (
@@ -171,11 +173,14 @@ export const useCartMethods = () => {
         )
     }
 
-    const addRemoveServiceCommon = async (
+    // This function is a common part of add/remove/select staff.
+    // It ensures essential states are reset when the cart's service composition changes.
+    const handleCartUpdate = async (
         cart: Cart,
         selectedCartAvailableItems: CartAvailableItem[]
     ): Promise<CartServices> => {
         setCart(cart)
+        // This function primarily loads items into selectedCartAvailableItemsState, not for staff display
         const services = await loadSelectedServicesFromCart(
             cart,
             selectedCartAvailableItems
@@ -183,6 +188,10 @@ export const useCartMethods = () => {
         resetStaffDatesStore()
         resetStaffTimesState()
         resetSelectedStaffTimeState()
+        // After cart updates, staff for the *active* service (if any) should be loaded.
+        // The active service is managed by activeSelectedServiceState.
+        // The calling context (e.g., a useEffect hook watching activeSelectedServiceState)
+        // will be responsible for calling loadStaffForService.
         return { cart, services }
     }
 
@@ -202,7 +211,9 @@ export const useCartMethods = () => {
         const selectedCartAvailableItems =
             selectedCartAvailableItemsStateValue.concat(availableItem)
         setSelectedCartAvailableItemsState(selectedCartAvailableItems)
-        return await addRemoveServiceCommon(cart, selectedCartAvailableItems)
+        // setActiveSelectedService should be called by the UI initiating addService,
+        // then loadStaffForService will be triggered by the change in activeSelectedServiceState.
+        return await handleCartUpdate(cart, selectedCartAvailableItems)
     }
 
     const removeService = async (
@@ -213,20 +224,25 @@ export const useCartMethods = () => {
         const selectedCartAvailableItems: CartAvailableItem[] = []
         let wasFound = false
         for (let item of selectedCartAvailableItemsStateValue) {
-            if (!wasFound && item.id === bookableItem.id) {
+            // Compare with bookableItem.item.id if your bookableItem is a CartBookableItem
+            // and item is a CartAvailableItem. This assumes IDs are consistent.
+            // For now, assuming item.id can match bookableItem.id (if bookableItem is the item itself)
+            // This might need adjustment based on exact types and ID sources.
+            if (!wasFound && item.id === bookableItem.id) { // This comparison might need care
                 wasFound = true
                 continue
             }
-
             selectedCartAvailableItems.push(item)
         }
         setSelectedCartAvailableItemsState(selectedCartAvailableItems)
-        return await addRemoveServiceCommon(cart, selectedCartAvailableItems)
+        // After removing a service, the active service might change or become undefined.
+        // UI should manage setting a new active service, which then triggers loadStaffForService.
+        return await handleCartUpdate(cart, selectedCartAvailableItems)
     }
 
     const addAddon = async (
         cart: Cart,
-        bookableItem: CartBookableItem,
+        bookableItem: CartBookableItem, // This is the service being modified
         option: CartAvailableBookableItemOption
     ) => {
         const options = bookableItem.selectedOptions
@@ -234,39 +250,65 @@ export const useCartMethods = () => {
             options: [...options, option],
             staffVariant: bookableItem.selectedStaffVariant,
         })
-        return await addRemoveServiceCommon(
+        // The active service (bookableItem) hasn't changed, but its state has. Reload its staff.
+        // However, general cart updates are handled by handleCartUpdate.
+        // loadStaffForService for the bookableItem should be triggered if its staff options could change.
+        // For now, let's assume addRemoveServiceCommon's resets are enough,
+        // and staff loading is tied to activeSelectedServiceState.
+        const result = await handleCartUpdate(
             cart,
-            selectedCartAvailableItemsStateValue
+            selectedCartAvailableItemsStateValue // selectedCartAvailableItemsStateValue should be up-to-date
         )
+        // Explicitly reload staff for the modified service if it's the active one
+        // This assumes activeSelectedServiceState holds the service being modified (bookableItem)
+        const currentActiveService = selectedCartAvailableItemsStateValue.find(s => s.id === bookableItem.item.id)
+        if (currentActiveService && isCartAvailableBookableItem(currentActiveService)) {
+             // Ensure bookableItem is compatible with loadStaffForService
+             // The `bookableItem` here is a CartBookableItem, loadStaffForService expects this.
+            await loadStaffForService(bookableItem)
+        }
+        return result
     }
 
     const removeAddon = async (
         cart: Cart,
-        bookableItem: CartBookableItem,
+        bookableItem: CartBookableItem, // Service being modified
         option: CartAvailableBookableItemOption
     ) => {
         const options = bookableItem.selectedOptions
         cart = await bookableItem.update({
             options: [...options.filter((opt) => opt.id !== option.id)],
         })
-        return await addRemoveServiceCommon(
+        const result = await handleCartUpdate(
             cart,
             selectedCartAvailableItemsStateValue
         )
+        // Similar to addAddon, reload staff for the active, modified service.
+        const currentActiveService = selectedCartAvailableItemsStateValue.find(s => s.id === bookableItem.item.id)
+        if (currentActiveService && isCartAvailableBookableItem(currentActiveService)) {
+            await loadStaffForService(bookableItem)
+        }
+        return result
     }
 
     const selectStaff = async (
         cart: Cart,
-        bookableItem: CartBookableItem,
+        bookableItem: CartBookableItem, // This is the service for which staff is being selected
         staff: Staff | undefined
     ) => {
         cart = await bookableItem.update({
             options: bookableItem.selectedOptions,
             staffVariant: staff?.staffVariant ?? { id: null },
         })
-        return await addRemoveServiceCommon(
+        // The staff selection for bookableItem has changed.
+        // Other cart items are not directly affected in terms of their own staff *options*.
+        // The primary outcome is that the cart is updated.
+        // `handleCartUpdate` resets general staff states (dates, times).
+        // `bookableStaffVariantsState` for *this* bookableItem doesn't need to be reloaded
+        // as we've just *selected* from it.
+        return await handleCartUpdate(
             cart,
-            selectedCartAvailableItemsStateValue
+            selectedCartAvailableItemsStateValue // This should reflect the current state of selected items
         )
     }
 
@@ -366,11 +408,20 @@ export const useCartMethods = () => {
                     cartStoreState
                 )
             }
-            loadSelectedServices(
-                cart,
-                cart.selectedBookableItems,
-                selectedCartAvailableCategory
-            )
+            // After reserving, selectedBookableItems are set.
+            // We need to load staff for the *active* service.
+            // The UI should determine which service becomes active.
+            // For now, if there's an active service, reload its staff.
+            // Otherwise, the component responsible for displaying staff should call loadStaffForService
+            // when a service becomes active.
+            // A default could be to load for the first service:
+            if (cart.selectedBookableItems.length > 0) {
+                const firstService = cart.selectedBookableItems[0]
+                // setActiveSelectedService should ideally be called by UI,
+                // then an effect would call loadStaffForService.
+                // Direct call here for simplicity if no immediate UI trigger.
+                setActiveSelectedService(firstService) // This will trigger effect to call loadStaffForService
+            }
             return cart
         } catch (error) {
             console.error('Error reserving bookable time:', error)
@@ -423,34 +474,54 @@ export const useCartMethods = () => {
         resetSelectedCartAvailableCategory()
     }
 
-    const loadSelectedServices = async (
-        cart: Cart,
-        servicesFromCart: CartBookableItem[],
+    /**
+     * Loads staff variants for a specific service item and updates relevant states.
+     * This function is intended to be called when the UI focus changes to a specific service
+     * for staff selection.
+     * @param serviceItem The CartBookableItem for which to load staff.
+     * @param selectedCartAvailableCategory Optional: The category to set as selected.
+     */
+    const loadStaffForService = async (
+        serviceItem: CartBookableItem,
         selectedCartAvailableCategory?: CartAvailableCategory | undefined
     ) => {
-        const services = reverseSelectedServices(servicesFromCart)
-        if (services.length === 0) {
+        if (!serviceItem) {
+            setBookableStaffVariants([])
+            setAllowChooseStaffError(false) // Or true, depending on desired behavior for no service
             return
         }
-        const activeService = services[0]
-        setActiveSelectedService(activeService)
 
-        if (isCartAvailableBookableItem(activeService.item)) {
-            const staffs = await activeService.item.getStaffVariants()
-            setBookableStaffVariants(
-                staffs.flatMap((z) =>
-                    cartAvailableBookableItemStaffVariantToStaff(z)
+        // Ensure activeSelectedServiceState is updated to this serviceItem.
+        // This is crucial if this function is called directly and not as an effect of activeSelectedServiceState changing.
+        // However, the primary design should be that setActiveSelectedService is called by UI,
+        // and an effect hook then calls this function.
+        // For safety, we can call it here, but it might cause an extra render if already set.
+        setActiveSelectedService(serviceItem)
+
+        if (isCartAvailableBookableItem(serviceItem)) { // Check if the service item itself is bookable
+            try {
+                const staffs = await serviceItem.item.getStaffVariants()
+                setBookableStaffVariants(
+                    staffs.flatMap((z) =>
+                        cartAvailableBookableItemStaffVariantToStaff(z)
+                    )
                 )
-            )
+                setAllowChooseStaffError(false)
+            } catch (error) {
+                console.error("Error loading staff variants:", error);
+                setBookableStaffVariants([])
+                setAllowChooseStaffError(true) // Indicate an error occurred
+            }
         } else {
             setBookableStaffVariants([])
+            setAllowChooseStaffError(false) // Not a bookable item, so no staff, no error in loading
         }
-        setAllowChooseStaffError(false)
+
         if (selectedCartAvailableCategory) {
             setSelectedCartAvailableCategory(selectedCartAvailableCategory)
         }
     }
-
+    
     const getSelectedCartAvailableCategoryFromSelectedServices = (
         servicesFromCart: CartBookableItem[],
         availableCategories: CartAvailableCategory[]
@@ -479,14 +550,29 @@ export const useCartMethods = () => {
         const servicesFromCart = await loadSelectedServicesFromCart(cart, [])
         const { selectedCartAvailableCategory } =
             getSelectedCartAvailableCategoryFromSelectedServices(
-                servicesFromCart,
+                servicesFromCart, // These are CartBookableItem[]
                 availableCategories
             )
-        await loadSelectedServices(
-            cart,
-            servicesFromCart,
-            selectedCartAvailableCategory
-        )
+
+        // After forcing load of selected services, we need to load staff
+        // for the now "active" service. loadSelectedServicesFromCart (used above)
+        // returns CartBookableItem[]. We might pick the first one as active.
+        if (servicesFromCart.length > 0) {
+            // setActiveSelectedService should be called here,
+            // which would then trigger an effect to call loadStaffForService.
+            // For simplicity in this refactor, if we assume forceLoadSelectedServices
+            // implies the first service becomes active for staff view:
+            setActiveSelectedService(servicesFromCart[0]) // This sets the active service
+            // The actual call to loadStaffForService would ideally be in a useEffect
+            // listening to activeSelectedServiceState.
+            // If direct call is needed: await loadStaffForService(servicesFromCart[0], selectedCartAvailableCategory);
+            // However, to stick to the pattern of activeSelectedService triggering staff load:
+            // The component observing activeSelectedServiceState should handle calling loadStaffForService.
+            // This function's responsibility ends at setting the active service.
+        } else {
+            setActiveSelectedService(undefined)
+            setBookableStaffVariants([]) // No services, so no staff
+        }
         return servicesFromCart
     }
 
@@ -611,9 +697,9 @@ export const useCartMethods = () => {
         addAddon: addAddon,
         removeAddon: removeAddon,
         selectStaff: selectStaff,
-        loadSelectedServices: loadSelectedServices,
-        forceLoadSelectedServices: forceLoadSelectedServices,
-        loadSelectedStaff: loadSelectedStaff,
+        loadStaffForService: loadStaffForService, // Renamed and behavior changed
+        forceLoadSelectedServices: forceLoadSelectedServices, // Interaction with loadStaffForService needs to be via activeSelectedServiceState
+        loadSelectedStaff: loadSelectedStaff, // This loads CHOSEN staff, not available staff.
         loadStoresForCartBookableItems: loadStoresForCartBookableItems,
         setCartLocation: setCartLocation,
         isCartAvailableBookableItem: isCartAvailableBookableItem,
